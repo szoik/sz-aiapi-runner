@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 from typing import Optional, List, Dict, Union
 from openai import OpenAI
+from dotenv import load_dotenv
 
 
 def get_project_root() -> Path:
@@ -16,11 +17,19 @@ def get_project_root() -> Path:
     return Path(__file__).parent.parent
 
 
+def _load_env() -> None:
+    """Load environment variables from .env file."""
+    env_path = get_project_root() / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+
+
 def get_openai_client() -> OpenAI:
     """
     Initialize and return OpenAI client.
-    Requires OPENAI_API_KEY environment variable.
+    Loads from .env file if present, otherwise uses environment variable.
     """
+    _load_env()
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise ValueError("OPENAI_API_KEY environment variable is not set")
