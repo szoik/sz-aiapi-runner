@@ -50,3 +50,5 @@ lerna-debug.log*
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
+
+.local
