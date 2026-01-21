@@ -51,4 +51,9 @@ lerna-debug.log*
 !.yarn/versions
 .pnp.*
 
+# Python
+.venv
+__pycache__
+*.pyc
+
 .local
