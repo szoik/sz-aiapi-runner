@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -36,6 +37,9 @@ from common import (
     build_user_content,
     call_openai_json,
 )
+
+# Global logger
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -112,12 +116,26 @@ def process_single_item(
         return False
 
 
-def create_output_dir() -> Path:
-    """Create output directory with timestamp."""
+def create_output_dir(dataset_count: int) -> Path:
+    """Create output directory with timestamp and dataset count."""
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    output_dir = get_project_root() / ".local" / timestamp
+    output_dir = get_project_root() / ".local" / f"{timestamp}-{dataset_count}"
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
+
+
+def setup_logging() -> None:
+    """Setup logging to combined log file at .local/weight-volume-run.log."""
+    log_dir = get_project_root() / ".local"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / "weight-volume-run.log"
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[logging.FileHandler(log_path, encoding="utf-8")],
+    )
 
 
 def write_description(
@@ -173,8 +191,23 @@ def process_batch(
     success_count = 0
     processed_count = 0
     results = []
+    errors = []
     
-    output_dir = create_output_dir() if store else None
+    # Count total items in file
+    with open(file_path, "r", encoding="utf-8") as f:
+        total_items = sum(1 for line in f if line.strip())
+    
+    # Determine dataset count (limit or total)
+    dataset_count = limit if limit is not None else total_items
+    
+    output_dir = create_output_dir(dataset_count) if store else None
+    setup_logging()
+    
+    logger.info(f"Starting batch processing: {file_path}")
+    logger.info(f"Limit: {limit if limit else 'None (all)'}")
+    logger.info(f"Store: {store}")
+    if output_dir:
+        logger.info(f"Output directory: {output_dir}")
     
     with open(file_path, "r", encoding="utf-8") as f:
         for line_num, line in enumerate(f, 1):
@@ -188,7 +221,9 @@ def process_batch(
             try:
                 data = json.loads(line)
             except json.JSONDecodeError as e:
-                print(f"Line {line_num}: JSON parse error: {e}", file=sys.stderr)
+                error_msg = f"Line {line_num}: JSON parse error: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
                 processed_count += 1
                 continue
             
@@ -196,6 +231,8 @@ def process_batch(
             product_name = data.get("productName", "")
             category = data.get("category", "")
             image_url = data.get("imageUrl")
+            
+            logger.info(f"Processing item {processed_count + 1}: id={item_id}, name={product_name[:30]}...")
             
             if output_format == "text":
                 print(f"\n--- Item {line_num} ---")
@@ -220,11 +257,16 @@ def process_batch(
                     print(f"Weight: {result.weight} kg")
                     print(f"Reason: {result.reason}")
                 
+                logger.info(f"  -> Success: volume={result.volume}, weight={result.weight}kg")
                 success_count += 1
             except Exception as e:
-                print(f"Error processing item {line_num}: {e}", file=sys.stderr)
+                error_msg = f"Error processing item {line_num} (id={item_id}): {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
             
             processed_count += 1
+    
+    logger.info(f"Batch processing complete: {success_count}/{processed_count} succeeded")
     
     if store and output_dir:
         # Write results
@@ -236,7 +278,7 @@ def process_batch(
         # Write description
         write_description(output_dir, file_path, limit, processed_count, success_count)
         
-        print(f"\nResults stored in: {output_dir}", file=sys.stderr)
+        logger.info(f"Results stored in: {output_dir}")
     
     if output_format == "text":
         print(f"\n=== Processed {processed_count} items, {success_count} succeeded ===")
