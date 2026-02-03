@@ -24,16 +24,26 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import subprocess
 import sys
-from concurrent.futures import ProcessPoolExecutor, as_completed
+import threading
+import time
+from concurrent.futures import ProcessPoolExecutor, Future
 from pathlib import Path
 from typing import Optional
+
+from rich.console import Console
+from rich.live import Live
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn, TimeRemainingColumn
+from rich.table import Table
+from rich.text import Text
 
 
 def get_project_root() -> Path:
     """Get project root directory."""
-    return Path(__file__).parent.parent
+    return Path(__file__).parent.parent.resolve()
 
 
 def get_jobs_dir() -> Path:
@@ -92,6 +102,8 @@ def run_chunk(chunk_dir: Path, prompt_file: str) -> tuple[str, bool, str]:
     Returns:
         (chunk_id, success, message)
     """
+    # Ensure absolute path for subprocess
+    chunk_dir = chunk_dir.resolve()
     chunk_id = chunk_dir.name
     input_file = chunk_dir / "input.tsv"
     result_file = chunk_dir / "result.tsv"
@@ -104,26 +116,48 @@ def run_chunk(chunk_dir: Path, prompt_file: str) -> tuple[str, bool, str]:
     project_root = get_project_root()
     script_path = project_root / "scripts" / "weight_volume_newprompt.py"
     
+    # Use project's venv python directly
+    venv_dir = project_root / ".venv"
+    venv_python = venv_dir / "bin" / "python"
+    
+    # Set up environment to activate venv
+    env = os.environ.copy()
+    env["VIRTUAL_ENV"] = str(venv_dir)
+    env["PATH"] = f"{venv_dir}/bin:{env.get('PATH', '')}"
+    env["PYTHONUNBUFFERED"] = "1"  # Disable stdout buffering
+    
+    # Log file for subprocess output
+    log_file = chunk_dir / "run.log"
+    
     try:
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(script_path),
-                "-i", str(input_file),
-                "-o", str(result_file),
-                "-p", prompt_file,
-            ],
-            capture_output=True,
-            text=True,
-            cwd=str(project_root),
-        )
+        with open(log_file, "w", encoding="utf-8") as log_f:
+            result = subprocess.run(
+                [
+                    str(venv_python),
+                    str(script_path),
+                    "-i", str(input_file),
+                    "-o", str(result_file),
+                    "-p", prompt_file,
+                ],
+                stdout=log_f,
+                stderr=subprocess.STDOUT,
+                text=True,
+                cwd=str(project_root),
+                env=env,
+            )
         
         if result.returncode == 0:
             # Mark as done
             done_marker.touch()
             return (chunk_id, True, "completed")
         else:
-            error_msg = result.stderr[:200] if result.stderr else "unknown error"
+            # Read last part of log for error message
+            try:
+                with open(log_file, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+                    error_msg = "".join(lines[-5:])[:200] if lines else "unknown error"
+            except Exception:
+                error_msg = "unknown error"
             return (chunk_id, False, f"exit code {result.returncode}: {error_msg}")
     
     except Exception as e:
@@ -176,6 +210,150 @@ def merge_results(job_dir: Path) -> Optional[Path]:
     return output_file
 
 
+def read_chunk_progress(chunk_dir: Path) -> tuple[int, int]:
+    """Read progress from chunk's progress.json file or estimate from result.tsv."""
+    progress_file = chunk_dir / "progress.json"
+    input_file = chunk_dir / "input.tsv"
+    result_file = chunk_dir / "result.tsv"
+    
+    # Get total from input.tsv
+    total = 0
+    if input_file.exists():
+        try:
+            with open(input_file, "r", encoding="utf-8") as f:
+                total = sum(1 for _ in f) - 1  # minus header
+        except Exception:
+            pass
+    
+    # Try reading progress.json first
+    try:
+        if progress_file.exists() and progress_file.stat().st_size > 0:
+            with open(progress_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # Support multiple formats:
+                # Format 1: {"current": N, "total": M, "status": "..."}
+                # Format 2: {"processed": N, "total": M, "percentage": ...}
+                # Format 3: {"last_processed_index": N, "total_processed": M}
+                current = (
+                    data.get("current") or 
+                    data.get("processed") or 
+                    data.get("total_processed", 0)
+                )
+                if data.get("total", 0) > 0:
+                    total = data.get("total")
+                return current, total
+    except Exception:
+        pass
+    
+    # Fallback: estimate progress from result.tsv line count
+    current = 0
+    if result_file.exists():
+        try:
+            with open(result_file, "r", encoding="utf-8") as f:
+                current = sum(1 for _ in f) - 1  # minus header
+                if current < 0:
+                    current = 0
+        except Exception:
+            pass
+    
+    return current, total
+
+
+def create_display(
+    workers: dict[int, dict],
+    overall_progress: Progress,
+    overall_task_id: int,
+    completed_chunks: list[str],
+    failed_chunks: list[str],
+    max_workers: int,
+) -> Table:
+    """Create the live display table."""
+    # Main layout table
+    layout = Table.grid(padding=(0, 0))
+    layout.add_column()
+    
+    # Worker status table
+    worker_table = Table(
+        show_header=True,
+        header_style="bold cyan",
+        box=None,
+        padding=(0, 2),
+    )
+    worker_table.add_column("Worker", style="dim", width=10)
+    worker_table.add_column("Chunk", width=8)
+    worker_table.add_column("Progress", width=28)
+    worker_table.add_column("Elapsed", width=10)
+    
+    for worker_id in range(1, max_workers + 1):
+        worker_info = workers.get(worker_id, {})
+        status = worker_info.get("status", "idle")
+        chunk_id = worker_info.get("chunk_id", "-")
+        chunk_dir = worker_info.get("chunk_dir")
+        start_time = worker_info.get("start_time")
+        
+        if status == "running" and start_time:
+            elapsed = time.time() - start_time
+            elapsed_str = f"{elapsed:.1f}s"
+            
+            # Read chunk progress and create bar
+            if chunk_dir:
+                current, total = read_chunk_progress(chunk_dir)
+                if total > 0:
+                    pct = int(current / total * 100)
+                    bar_width = 20
+                    filled = int(bar_width * current / total)
+                    bar = "█" * filled + "░" * (bar_width - filled)
+                    progress_str = Text()
+                    progress_str.append(bar, style="yellow")
+                    progress_str.append(f" {pct:3d}%", style="bold")
+                else:
+                    progress_str = Text("starting...", style="dim")
+            else:
+                progress_str = Text("-", style="dim")
+        elif status == "idle":
+            elapsed_str = "-"
+            progress_str = Text("idle", style="dim")
+        else:
+            elapsed_str = "-"
+            progress_str = Text("-", style="dim")
+        
+        worker_table.add_row(
+            f"[Worker {worker_id}]",
+            str(chunk_id),
+            progress_str,
+            elapsed_str,
+        )
+    
+    layout.add_row(worker_table)
+    layout.add_row("")
+    
+    # Overall progress
+    layout.add_row(overall_progress)
+    layout.add_row("")
+    
+    # Completed chunks (show last 10)
+    if completed_chunks or failed_chunks:
+        status_parts = []
+        
+        # Show recent completions
+        recent_completed = completed_chunks[-15:] if len(completed_chunks) > 15 else completed_chunks
+        if recent_completed:
+            completed_text = " ".join([f"[green]✓{c}[/green]" for c in recent_completed])
+            if len(completed_chunks) > 15:
+                completed_text = f"... {completed_text}"
+            status_parts.append(completed_text)
+        
+        # Show failures
+        if failed_chunks:
+            failed_text = " ".join([f"[red]✗{c}[/red]" for c in failed_chunks[-5:]])
+            status_parts.append(failed_text)
+        
+        if status_parts:
+            layout.add_row(Text.from_markup("  ".join(status_parts)))
+    
+    return layout
+
+
 def run_parallel(
     job_id: str,
     max_workers: int = 5,
@@ -187,17 +365,18 @@ def run_parallel(
     Returns:
         Number of successfully completed chunks
     """
+    console = Console()
     job_dir = get_jobs_dir() / job_id
     meta = load_job_meta(job_id)
     
     if not meta:
-        print(f"ERROR: Job not found: {job_id}")
+        console.print(f"[red]ERROR: Job not found: {job_id}[/red]")
         return 0
     
     # Check if chunks are ready
     ready_marker = job_dir / ".chunks_ready"
     if not ready_marker.exists():
-        print(f"ERROR: Chunks not ready (missing .chunks_ready marker)")
+        console.print("[red]ERROR: Chunks not ready (missing .chunks_ready marker)[/red]")
         return 0
     
     prompt_file = meta["prompt_file"]
@@ -205,60 +384,153 @@ def run_parallel(
     completed = get_completed_chunks(job_dir)
     total_chunks = meta["chunk_count"]
     
-    print(f"Job: {job_id}")
-    print(f"Prompt: {prompt_file}")
-    print(f"Total chunks: {total_chunks}")
-    print(f"Completed: {len(completed)}")
-    print(f"Pending: {len(pending)}")
-    print(f"Workers: {max_workers}")
-    print("-" * 60)
+    console.print(f"[bold]Job:[/bold] {job_id}")
+    console.print(f"[bold]Prompt:[/bold] {prompt_file}")
+    console.print(f"[bold]Total chunks:[/bold] {total_chunks}")
+    console.print(f"[bold]Completed:[/bold] {len(completed)}")
+    console.print(f"[bold]Pending:[/bold] {len(pending)}")
+    console.print(f"[bold]Workers:[/bold] {max_workers}")
+    console.print("-" * 60)
     
     if not pending:
-        print("All chunks completed!")
+        console.print("[green]All chunks completed![/green]")
         return len(completed)
     
     if dry_run:
-        print("Dry run - would process:")
+        console.print("[yellow]Dry run - would process:[/yellow]")
         for chunk_dir in pending[:10]:
-            print(f"  {chunk_dir.name}")
+            console.print(f"  {chunk_dir.name}")
         if len(pending) > 10:
-            print(f"  ... and {len(pending) - 10} more")
+            console.print(f"  ... and {len(pending) - 10} more")
         return 0
     
-    # Run in parallel
-    success_count = 0
+    # State tracking - include already completed chunks
+    workers: dict[int, dict] = {}
+    completed_chunks: list[str] = [c.name for c in completed]  # Pre-fill with already done
+    failed_chunks: list[str] = []
+    success_count = len(completed)  # Count already completed
     fail_count = 0
+    lock = threading.Lock()
     
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(run_chunk, chunk_dir, prompt_file): chunk_dir
-            for chunk_dir in pending
-        }
-        
-        for future in as_completed(futures):
-            chunk_dir = futures[future]
-            try:
-                chunk_id, success, message = future.result()
-                if success:
-                    success_count += 1
-                    print(f"✓ Chunk {chunk_id}: {message}")
-                else:
-                    fail_count += 1
-                    print(f"✗ Chunk {chunk_id}: {message}")
-            except Exception as e:
-                fail_count += 1
-                print(f"✗ Chunk {chunk_dir.name}: {e}")
+    # Map futures to worker IDs
+    future_to_worker: dict[Future, int] = {}
+    future_to_chunk: dict[Future, Path] = {}
+    available_workers: list[int] = list(range(1, max_workers + 1))
     
-    print("-" * 60)
-    print(f"Completed: {success_count}, Failed: {fail_count}")
+    # Overall progress bar - total includes already completed + pending
+    overall_progress = Progress(
+        TextColumn("[bold blue]Overall:"),
+        BarColumn(bar_width=40),
+        TaskProgressColumn(),
+        TextColumn("•"),
+        TimeElapsedColumn(),
+        TextColumn("<"),
+        TimeRemainingColumn(),
+    )
+    overall_task_id = overall_progress.add_task(
+        "overall", 
+        total=len(completed) + len(pending),
+        completed=len(completed)  # Start with already completed count
+    )
+    
+    def update_display() -> Table:
+        return create_display(
+            workers, overall_progress, overall_task_id,
+            completed_chunks, failed_chunks, max_workers
+        )
+    
+    with Live(update_display(), refresh_per_second=4, console=console) as live:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            # Submit initial batch of tasks
+            pending_iter = iter(pending)
+            
+            def submit_next() -> Optional[Future]:
+                """Submit next chunk if workers available."""
+                if not available_workers:
+                    return None
+                try:
+                    chunk_dir = next(pending_iter)
+                except StopIteration:
+                    return None
+                
+                worker_id = available_workers.pop(0)
+                future = executor.submit(run_chunk, chunk_dir, prompt_file)
+                future_to_worker[future] = worker_id
+                future_to_chunk[future] = chunk_dir
+                
+                with lock:
+                    workers[worker_id] = {
+                        "status": "running",
+                        "chunk_id": chunk_dir.name,
+                        "chunk_dir": chunk_dir,
+                        "start_time": time.time(),
+                    }
+                
+                live.update(update_display())
+                return future
+            
+            # Submit initial batch
+            active_futures: set[Future] = set()
+            for _ in range(max_workers):
+                f = submit_next()
+                if f:
+                    active_futures.add(f)
+            
+            # Process as futures complete
+            while active_futures:
+                # Check for completed futures
+                done_futures = set()
+                for future in active_futures:
+                    if future.done():
+                        done_futures.add(future)
+                
+                for future in done_futures:
+                    active_futures.remove(future)
+                    worker_id = future_to_worker[future]
+                    chunk_dir = future_to_chunk[future]
+                    
+                    try:
+                        chunk_id, success, message = future.result()
+                        with lock:
+                            if success:
+                                success_count += 1
+                                completed_chunks.append(chunk_id)
+                            else:
+                                fail_count += 1
+                                failed_chunks.append(chunk_id)
+                            
+                            workers[worker_id] = {"status": "idle", "chunk_id": "-"}
+                    except Exception as e:
+                        with lock:
+                            fail_count += 1
+                            failed_chunks.append(chunk_dir.name)
+                            workers[worker_id] = {"status": "idle", "chunk_id": "-"}
+                    
+                    # Free worker
+                    available_workers.append(worker_id)
+                    overall_progress.update(overall_task_id, advance=1)
+                    
+                    # Submit next task
+                    f = submit_next()
+                    if f:
+                        active_futures.add(f)
+                    
+                    live.update(update_display())
+                
+                if active_futures and not done_futures:
+                    time.sleep(0.1)
+                    live.update(update_display())
+    
+    console.print("-" * 60)
+    console.print(f"[green]Completed: {success_count}[/green], [red]Failed: {fail_count}[/red]")
     
     # Check if all done
     remaining = get_pending_chunks(job_dir)
     if not remaining:
-        print("All chunks completed!")
-        print()
-        print("To merge results:")
-        print(f"  python scripts/run_parallel.py {job_id} --merge")
+        console.print("[bold green]All chunks completed![/bold green]")
+        console.print()
+        console.print("To merge results:")
+        console.print(f"  python scripts/run_parallel.py {job_id} --merge")
     
     return success_count
 

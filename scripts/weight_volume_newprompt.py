@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -186,15 +187,42 @@ def run_estimation(
     elif offset > 0:
         print(f"Offset mode: skipping first {offset} rows")
     
+    # Count total records for progress tracking
+    input_path = Path(input_file)
+    total_records = sum(1 for _ in iter_tsv(input_file))
+    if limit:
+        total_records = min(total_records, limit)
+    
+    # Progress file path (in same directory as input file)
+    progress_file = input_path.parent / "progress.json"
+    
+    def write_progress(current: int, total: int, status: str = "running"):
+        """Write progress to file for external monitoring."""
+        try:
+            progress_data = {
+                "current": current,
+                "total": total,
+                "status": status,
+            }
+            with open(progress_file, "w", encoding="utf-8") as f:
+                json.dump(progress_data, f)
+                f.flush()
+        except Exception as e:
+            print(f"[PROGRESS ERROR] {e}", file=sys.stderr)
+    
     print(f"Input: {input_file}")
     print(f"Output: {output_file}")
     print(f"Prompt: {prompt_file}")
     print(f"Limit: {limit if limit else 'all'}")
+    print(f"Total records: {total_records}")
     if skip_count > 0:
         print(f"Skip: {skip_count} rows")
     if resume:
         print(f"Resume: {'append to existing' if append_mode else 'new file'}")
     print("-" * 80)
+    
+    # Initialize progress
+    write_progress(0, total_records, "starting")
     
     # Output columns
     output_columns = [
@@ -278,6 +306,10 @@ def run_estimation(
                 print(f"[{processed + 1}] ✗ {product_name[:40]} - ERROR: {e}")
             
             processed += 1
+            write_progress(processed, total_records, "running")
+    
+    # Mark as completed
+    write_progress(processed, total_records, "completed")
     
     # Summary
     print("-" * 80)
