@@ -1,5 +1,31 @@
 # Input Data Sources
 
+## Dataset Relationships
+
+- **datasource.tsv** (10,185건) - BigQuery 원본, AI 추정값 + 실측값 모두 있음
+  - **dataset_proper.tsv** (8,879건) - 유니크 상품 (이미지 URL 기준 중복 제거)
+    - **datasource_complete.tsv** (4,610건) - AI 추정값 있음 → 프롬프트 비교 실험용
+    - **datasource_incomplete.tsv** (4,269건) - AI 추정값 없음 → 신규 추정 대상
+    - **categories/** (10개, 603건) - 오차율 ±50% 기준 카테고리별 서브셋
+  - **dataset_duplicated.tsv** (1,306건) - 중복 상품 → 실측값 변동성 분석용
+
+※ `datasource_complete/incomplete.tsv`에는 `dataset_duplicated`에서 온 데이터도 포함 (총 5,585 / ~5,700건)
+※ `product_info_details` 필드에 줄바꿈이 있어 `wc -l`과 실제 건수가 다름
+
+### Summary Table
+
+| File | Rows | Description |
+|------|------|-------------|
+| datasource.tsv | 10,185 | 원본 (AI 추정 + 실측 모두 있음) |
+| dataset_proper.tsv | 8,879 | 유니크 상품 (중복 제거) |
+| dataset_duplicated.tsv | 1,306 | 중복 상품 (변동성 분석용) |
+| datasource_complete.tsv | 5,585 | AI 추정값 있음 (proper 4,610 + dup 일부) |
+| datasource_incomplete.tsv | ~5,700 | AI 추정값 없음 (proper 4,269 + dup 일부) |
+| missing_estimations.tsv | 414 | 실측 있으나 AI 추정 없음 |
+| categories/*.tsv | 603 | 오차 분석용 서브셋 |
+
+---
+
 ## datasource.tsv
 
 Main dataset for AI weight/volume estimation experiments.
