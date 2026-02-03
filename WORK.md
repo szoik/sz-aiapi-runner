@@ -57,21 +57,43 @@
 | 파일 | 설명 | 상태 |
 |------|------|------|
 | `scripts/weight_volume.py` | OpenAI 추정 스크립트 (기존) | ✅ 기존 |
-| `scripts/weight_volume_gemini.py` | Gemini 추정 스크립트 (기존) | ✅ 기존 |
-| `scripts/run_estimation.py` | 새 프롬프트로 배치 재추정 *(예정)* | 📋 TODO |
-| `dataset/sample_for_test.jsonl` | 테스트용 샘플 (100-200건) *(예정)* | 📋 TODO |
-| `${ANALYSIS_DIR}/reestimation/result.jsonl` | 재추정 결과 저장 | 📋 TODO |
+| `scripts/weight_volume_gemini.py` | Gemini 추정 스크립트 | ✅ 완료 |
+| `scripts/weight_volume_newprompt.py` | 새 프롬프트로 배치 재추정 (resume 지원) | ✅ 완료 |
+| `inputs/datasource_complete.tsv` | 재추정 입력 데이터 (5,585건) | ✅ 완료 |
 
-**4단계 산출물**: 새 프롬프트로 추정한 결과 데이터
+**실행 예시:**
+```bash
+# 전체 실행 (500건씩, resume 가능)
+uv run python scripts/weight_volume_newprompt.py \
+    -i inputs/datasource_complete.tsv \
+    -p weight-volume.v2.system.txt \
+    -o .local/prompt_results/weight-volume.v2.system/datasource_complete/result.tsv \
+    -l 500 \
+    --resume
+```
+
+**4단계 산출물**: `result.tsv` (새 프롬프트로 추정한 결과)
 
 # 5단계: 비교 평가
 
 | 파일 | 설명 | 상태 |
 |------|------|------|
-| `scripts/compare_results.py` | 기존 vs 신규 추정 비교 *(예정)* | 📋 TODO |
-| `${ANALYSIS_DIR}/v1_vs_v2_comparison.md` | 버전별 정확도 비교 리포트 *(예정)* | 📋 TODO |
+| `scripts/merge_results.py` | 기존 추정+실측과 신규 추정 조인 | ✅ 완료 |
+| `scripts/compare_prompts.py` | 비교 결과 시각화 (그래프, 통계) | ✅ 완료 |
 
-**5단계 산출물**: 개선 효과 수치화 (오차율 감소폭 등)
+**실행 예시:**
+```bash
+# 1. 결과 병합
+uv run python scripts/merge_results.py \
+    -d inputs/datasource_complete.tsv \
+    -r .local/prompt_results/weight-volume.v2.system/datasource_complete/result.tsv
+
+# 2. 시각화
+uv run python scripts/compare_prompts.py \
+    -i .local/prompt_results/weight-volume.v2.system/datasource_complete/comparison.tsv
+```
+
+**5단계 산출물**: `comparison.tsv`, `comparison.png`, `stats.md`
 
 ---
 
