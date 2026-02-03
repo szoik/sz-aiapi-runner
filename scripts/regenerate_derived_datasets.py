@@ -174,7 +174,7 @@ def main():
     # Paths
     jsonl_path = project_root / '.local' / 'basedata' / 'single_item_kse_full_20260203.jsonl'
     inputs_dir = project_root / 'inputs'
-    backup_dir = inputs_dir / 'backups'
+    backup_dir = project_root / '.local' / 'backups'
     
     print("=" * 60)
     print("Regenerate Derived Datasets from JSONL")
