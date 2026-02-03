@@ -400,7 +400,7 @@ def run_parallel(
     
     console.print(f"[bold]Job:[/bold] {job_id}")
     console.print(f"[bold]Prompt:[/bold] {prompt_file}")
-    console.print(f"[bold]Total chunks:[/bold] {total_chunks}")
+    console.print(f"[bold]Total chunks:[/bold] {total_chunks} (chunk size: {meta['chunk_size']})")
     console.print(f"[bold]Workers:[/bold] {max_workers}")
     console.print("-" * 60)
     
