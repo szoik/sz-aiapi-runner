@@ -138,6 +138,7 @@ def run_chunk(chunk_dir: Path, prompt_file: str) -> tuple[str, bool, str]:
                     "-i", str(input_file),
                     "-o", str(result_file),
                     "-p", prompt_file,
+                    "--resume",  # 중단된 청크는 이어서 처리
                 ],
                 stdout=log_f,
                 stderr=subprocess.STDOUT,
@@ -266,11 +267,26 @@ def create_display(
     completed_chunks: list[str],
     failed_chunks: list[str],
     max_workers: int,
+    total_chunks: int,
 ) -> Table:
     """Create the live display table."""
     # Main layout table
     layout = Table.grid(padding=(0, 0))
     layout.add_column()
+    
+    # Status line: Completed / Failed / Pending
+    pending_count = total_chunks - len(completed_chunks) - len(failed_chunks)
+    status_line = Text()
+    status_line.append(f"Completed: ", style="dim")
+    status_line.append(f"{len(completed_chunks)}", style="bold green")
+    status_line.append(f"  Failed: ", style="dim")
+    status_line.append(f"{len(failed_chunks)}", style="bold red")
+    status_line.append(f"  Pending: ", style="dim")
+    status_line.append(f"{pending_count}", style="bold yellow")
+    status_line.append(f"  Total: ", style="dim")
+    status_line.append(f"{total_chunks}", style="bold")
+    layout.add_row(status_line)
+    layout.add_row("")
     
     # Worker status table
     worker_table = Table(
@@ -436,7 +452,7 @@ def run_parallel(
     def update_display() -> Table:
         return create_display(
             workers, overall_progress, overall_task_id,
-            completed_chunks, failed_chunks, max_workers
+            completed_chunks, failed_chunks, max_workers, total_chunks
         )
     
     with Live(update_display(), refresh_per_second=4, console=console) as live:
