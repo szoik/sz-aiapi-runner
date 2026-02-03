@@ -373,3 +373,94 @@ overall_task_id = overall_progress.add_task(
 - `scripts/weight_volume_newprompt.py`
   - `import json` 추가
   - `write_progress()` 예외 처리 개선
+
+---
+
+## 청크 중단 후 재개 기능 개선 (2026-02-03 ~23:30)
+
+### 문제
+
+청크 처리 중 강제 중단(Ctrl+C) 후 다시 실행하면, 해당 청크를 처음부터 다시 처리함. 이미 처리한 항목들이 낭비됨.
+
+### 원인 분석
+
+1. **파일 버퍼링**: `writerow()` 후 `flush()`를 하지 않아 강제 중단 시 버퍼 데이터 손실
+2. **손상된 TSV 처리**: 중단 시 불완전하게 기록된 마지막 줄이 파싱 오류 유발 가능
+3. **progress 표시**: resume 시 이미 처리된 항목 수가 progress bar에 반영 안 됨
+
+### 해결
+
+#### 1. 매 행 쓰기 후 flush 추가
+
+```python
+writer.writerow({...})
+out_f.flush()  # 즉시 디스크에 기록
+```
+
+#### 2. 손상된 TSV 파일 처리 개선
+
+`get_processed_order_ids()` 함수 재작성:
+- `csv.DictReader` 대신 직접 라인 파싱
+- 헤더 컬럼 수와 다른 필드 수를 가진 줄은 건너뜀 (불완전한 줄)
+- 파일 읽기 오류 시 안전하게 빈 set 반환
+
+```python
+expected_field_count = len(fieldnames)
+
+for line_num, line in enumerate(lines[1:], start=2):
+    fields = line.split("\t")
+    
+    # 불완전한 줄 건너뛰기
+    if len(fields) < expected_field_count:
+        print(f"Warning: Skipping incomplete line {line_num}", file=sys.stderr)
+        continue
+    
+    order_id = fields[order_id_idx]
+    if order_id:
+        order_ids.add(order_id)
+```
+
+#### 3. resume 시 progress 표시 수정
+
+이미 처리된 항목 수를 초기값으로 반영:
+
+```python
+already_processed = len(processed_ids) if resume else 0
+write_progress(already_processed, total_records, "starting")
+
+processed = already_processed  # 0이 아닌 이미 처리된 수부터 시작
+```
+
+### UI 정리
+
+- 헤더에서 중복 정보 제거 (Completed/Pending - 하단과 중복)
+- 하단 status line에서 Total 제거 (고정값이라 불필요)
+- 헤더에 chunk size 표시 추가
+
+### 수정된 파일
+
+- `scripts/weight_volume_newprompt.py`
+  - `out_f.flush()` 추가
+  - `get_processed_order_ids()` 재작성
+  - resume 시 progress 초기값 설정
+
+- `scripts/run_parallel.py`
+  - 헤더에서 Completed/Pending 제거
+  - status line에서 Total 제거
+  - chunk size 표시 추가
+
+---
+
+## TODO
+
+### UI 정리
+- 청크 사이즈 같은 항목을 같은 차원에 두기
+- 처리할 총 개수 표시
+
+### 스크립트 연결
+- 3개 스크립트 (split_dataset, run_parallel, merge) 자동 연결 실행
+- 개별 실행도 가능하게 유지
+
+### 진행 상황 표시 개선
+- 개별 청크에서 실패 항목 표시 (세로 빨간 줄?)
+- 현재 처리중인 항목명 프로그레스 바 옆에 표시
