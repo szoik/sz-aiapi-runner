@@ -283,8 +283,6 @@ def create_display(
     status_line.append(f"{len(failed_chunks)}", style="bold red")
     status_line.append(f"  Pending: ", style="dim")
     status_line.append(f"{pending_count}", style="bold yellow")
-    status_line.append(f"  Total: ", style="dim")
-    status_line.append(f"{total_chunks}", style="bold")
     layout.add_row(status_line)
     layout.add_row("")
     
@@ -403,8 +401,6 @@ def run_parallel(
     console.print(f"[bold]Job:[/bold] {job_id}")
     console.print(f"[bold]Prompt:[/bold] {prompt_file}")
     console.print(f"[bold]Total chunks:[/bold] {total_chunks}")
-    console.print(f"[bold]Completed:[/bold] {len(completed)}")
-    console.print(f"[bold]Pending:[/bold] {len(pending)}")
     console.print(f"[bold]Workers:[/bold] {max_workers}")
     console.print("-" * 60)
     
