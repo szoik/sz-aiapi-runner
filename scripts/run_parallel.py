@@ -268,6 +268,7 @@ def create_display(
     failed_chunks: list[str],
     max_workers: int,
     total_chunks: int,
+    worker_col_width: int = 12,
 ) -> Table:
     """Create the live display table."""
     # Main layout table
@@ -293,7 +294,7 @@ def create_display(
         box=None,
         padding=(0, 2),
     )
-    worker_table.add_column("Worker", style="dim", width=10)
+    worker_table.add_column("Worker", style="dim", width=worker_col_width)
     worker_table.add_column("Chunk", width=8)
     worker_table.add_column("Progress", width=28)
     worker_table.add_column("Elapsed", width=10)
@@ -345,25 +346,24 @@ def create_display(
     layout.add_row(overall_progress)
     layout.add_row("")
     
-    # Completed chunks (show last 10)
+    # Completed/failed chunks - natural flow with wrapping
     if completed_chunks or failed_chunks:
-        status_parts = []
+        chunks_text = Text()
         
-        # Show recent completions
-        recent_completed = completed_chunks[-15:] if len(completed_chunks) > 15 else completed_chunks
-        if recent_completed:
-            completed_text = " ".join([f"[green]✓{c}[/green]" for c in recent_completed])
-            if len(completed_chunks) > 15:
-                completed_text = f"... {completed_text}"
-            status_parts.append(completed_text)
+        # Add completed chunks (green)
+        for i, c in enumerate(completed_chunks):
+            if i > 0:
+                chunks_text.append(" ")
+            chunks_text.append(c, style="green")
         
-        # Show failures
-        if failed_chunks:
-            failed_text = " ".join([f"[red]✗{c}[/red]" for c in failed_chunks[-5:]])
-            status_parts.append(failed_text)
+        # Add failed chunks (red)
+        for c in failed_chunks:
+            if len(chunks_text) > 0:
+                chunks_text.append(" ")
+            chunks_text.append(c, style="red")
         
-        if status_parts:
-            layout.add_row(Text.from_markup("  ".join(status_parts)))
+        if len(chunks_text) > 0:
+            layout.add_row(chunks_text)
     
     return layout
 
@@ -398,10 +398,13 @@ def run_parallel(
     completed = get_completed_chunks(job_dir)
     total_chunks = meta["chunk_count"]
     
-    console.print(f"[bold]Job:[/bold] {job_id}")
-    console.print(f"[bold]Prompt:[/bold] {prompt_file}")
-    console.print(f"[bold]Total chunks:[/bold] {total_chunks} (chunk size: {meta['chunk_size']})")
-    console.print(f"[bold]Workers:[/bold] {max_workers}")
+    console.print(f"[bold]Job:[/bold] {job_id}  [bold]Prompt:[/bold] {prompt_file}")
+    console.print(
+        f"[bold]Total items:[/bold] {meta['total_records']:,}  "
+        f"[bold]Chunks:[/bold] {total_chunks}  "
+        f"[bold]Chunk size:[/bold] {meta['chunk_size']}  "
+        f"[bold]Workers:[/bold] {max_workers}"
+    )
     console.print("-" * 60)
     
     if not pending:
@@ -445,10 +448,14 @@ def run_parallel(
         completed=len(completed)  # Start with already completed count
     )
     
+    # Calculate worker column width: "[Worker " + digits + "]"
+    worker_col_width = len(f"[Worker {max_workers}]") + 1
+    
     def update_display() -> Table:
         return create_display(
             workers, overall_progress, overall_task_id,
-            completed_chunks, failed_chunks, max_workers, total_chunks
+            completed_chunks, failed_chunks, max_workers, total_chunks,
+            worker_col_width
         )
     
     with Live(update_display(), refresh_per_second=4, console=console) as live:
