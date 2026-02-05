@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -96,18 +97,60 @@ def count_existing_results(output_file: str) -> int:
 
 
 def get_processed_order_ids(output_file: str) -> set:
-    """Get set of order_ids already processed (for more reliable resume)."""
+    """Get set of order_ids already processed (for more reliable resume).
+    
+    Handles corrupted/incomplete TSV files gracefully by:
+    - Skipping malformed lines
+    - Handling incomplete last line from interrupted writes
+    """
     output_path = Path(output_file)
     if not output_path.exists():
         return set()
     
     order_ids = set()
-    with open(output_path, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f, delimiter="\t")
-        for row in reader:
-            order_id = row.get("order_id", "")
-            if order_id:
-                order_ids.add(order_id)
+    
+    # Read file and handle potential corruption
+    try:
+        with open(output_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except Exception as e:
+        print(f"Warning: Could not read result file: {e}", file=sys.stderr)
+        return set()
+    
+    if not lines:
+        return set()
+    
+    # Parse header
+    header_line = lines[0].strip()
+    if not header_line:
+        return set()
+    
+    fieldnames = header_line.split("\t")
+    try:
+        order_id_idx = fieldnames.index("order_id")
+    except ValueError:
+        print("Warning: 'order_id' column not found in result file", file=sys.stderr)
+        return set()
+    
+    expected_field_count = len(fieldnames)
+    
+    # Parse data rows, skipping malformed ones
+    for line_num, line in enumerate(lines[1:], start=2):
+        line = line.strip()
+        if not line:
+            continue
+        
+        fields = line.split("\t")
+        
+        # Skip incomplete lines (must have all columns to be considered complete)
+        # This ensures partially written rows are re-processed
+        if len(fields) < expected_field_count:
+            print(f"Warning: Skipping incomplete line {line_num} ({len(fields)}/{expected_field_count} fields)", file=sys.stderr)
+            continue
+        
+        order_id = fields[order_id_idx]
+        if order_id:
+            order_ids.add(order_id)
     
     return order_ids
 
@@ -186,15 +229,43 @@ def run_estimation(
     elif offset > 0:
         print(f"Offset mode: skipping first {offset} rows")
     
+    # Count total records for progress tracking
+    input_path = Path(input_file)
+    total_records = sum(1 for _ in iter_tsv(input_file))
+    if limit:
+        total_records = min(total_records, limit)
+    
+    # Progress file path (in same directory as input file)
+    progress_file = input_path.parent / "progress.json"
+    
+    def write_progress(current: int, total: int, status: str = "running"):
+        """Write progress to file for external monitoring."""
+        try:
+            progress_data = {
+                "current": current,
+                "total": total,
+                "status": status,
+            }
+            with open(progress_file, "w", encoding="utf-8") as f:
+                json.dump(progress_data, f)
+                f.flush()
+        except Exception as e:
+            print(f"[PROGRESS ERROR] {e}", file=sys.stderr)
+    
     print(f"Input: {input_file}")
     print(f"Output: {output_file}")
     print(f"Prompt: {prompt_file}")
     print(f"Limit: {limit if limit else 'all'}")
+    print(f"Total records: {total_records}")
     if skip_count > 0:
         print(f"Skip: {skip_count} rows")
     if resume:
         print(f"Resume: {'append to existing' if append_mode else 'new file'}")
     print("-" * 80)
+    
+    # Initialize progress (include already processed items for resume)
+    already_processed = len(processed_ids) if resume else 0
+    write_progress(already_processed, total_records, "starting")
     
     # Output columns
     output_columns = [
@@ -210,7 +281,7 @@ def run_estimation(
         "new_reason",
     ]
     
-    processed = 0
+    processed = already_processed
     success = 0
     skipped = 0
     
@@ -257,7 +328,7 @@ def run_estimation(
                 # Parse volume dimensions
                 w, d, h = parse_volume_string(packed_volume or volume)
                 
-                # Write result
+                # Write result and flush immediately for crash safety
                 writer.writerow({
                     "order_id": order_id,
                     "title_origin": product_name,
@@ -270,14 +341,19 @@ def run_estimation(
                     "new_height_cm": h,
                     "new_reason": reason,
                 })
+                out_f.flush()
                 
-                print(f"[{processed + 1}] ✓ {product_name[:40]} → {weight}kg")
                 success += 1
+                print(f"[{processed + 1}] ✓ {product_name[:40]} → {weight}kg")
                 
             except Exception as e:
                 print(f"[{processed + 1}] ✗ {product_name[:40]} - ERROR: {e}")
             
             processed += 1
+            write_progress(processed, total_records, "running")
+    
+    # Mark as completed
+    write_progress(processed, total_records, "completed")
     
     # Summary
     print("-" * 80)
