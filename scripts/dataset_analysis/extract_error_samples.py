@@ -6,13 +6,13 @@
 
 사용법:
     # 과대추정 상위 5개 추출
-    python scripts/extract_error_samples.py -i .local/tmp/category_datasets/robot_toy.tsv --type over -n 5
+    python scripts/dataset_analysis/extract_error_samples.py -i .local/tmp/category_datasets/robot_toy.tsv --type over -n 5
     
     # 과소추정 상위 5개 추출
-    python scripts/extract_error_samples.py -i .local/tmp/category_datasets/robot_toy.tsv --type under -n 5
+    python scripts/dataset_analysis/extract_error_samples.py -i .local/tmp/category_datasets/robot_toy.tsv --type under -n 5
     
     # 양방향 (절대값 기준) 상위 10개 추출
-    python scripts/extract_error_samples.py -i .local/tmp/category_datasets/robot_toy.tsv --type both -n 10
+    python scripts/dataset_analysis/extract_error_samples.py -i .local/tmp/category_datasets/robot_toy.tsv --type both -n 10
 
 출력:
     - 콘솔에 이미지 URL과 오차 정보 출력

@@ -10,13 +10,13 @@
 
 사용법:
     # 단일 파일 분석
-    python scripts/category_pattern_analysis.py -i .local/tmp/category_datasets/robot_toy.tsv
+    python scripts/dataset_analysis/category_pattern_analysis.py -i .local/tmp/category_datasets/robot_toy.tsv
     
     # 여러 파일 분석
-    python scripts/category_pattern_analysis.py -i .local/tmp/category_datasets/*.tsv
+    python scripts/dataset_analysis/category_pattern_analysis.py -i .local/tmp/category_datasets/*.tsv
     
     # 결과를 파일로 저장
-    python scripts/category_pattern_analysis.py -i .local/tmp/category_datasets/*.tsv -o .local/tmp/pattern_analysis.txt
+    python scripts/dataset_analysis/category_pattern_analysis.py -i .local/tmp/category_datasets/*.tsv -o .local/tmp/pattern_analysis.txt
 
 출력:
     - 콘솔에 패턴 분석 결과 출력

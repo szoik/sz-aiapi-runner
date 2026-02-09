@@ -5,17 +5,17 @@
 카테고리별 오차가 가장 큰 항목들을 추출하여 테이블 형식으로 출력합니다.
 
 사용법:
-    python scripts/error_top_items.py --input INPUT_FILE [--top N] [--type TYPE] [--output OUTPUT_DIR]
+    python scripts/dataset_analysis/error_top_items.py --input INPUT_FILE [--top N] [--type TYPE] [--output OUTPUT_DIR]
 
 예시:
     # 과대추정 TOP 10 (기본)
-    python scripts/error_top_items.py -i inputs/categories/o01_보이그룹_인형피규어_err50.tsv
+    python scripts/dataset_analysis/error_top_items.py -i inputs/categories/o01_보이그룹_인형피규어_err50.tsv
     
     # 과소추정 TOP 5
-    python scripts/error_top_items.py -i inputs/categories/u01_이어폰팁_err50.tsv --top 5 --type under
+    python scripts/dataset_analysis/error_top_items.py -i inputs/categories/u01_이어폰팁_err50.tsv --top 5 --type under
     
     # 양방향 모두 출력
-    python scripts/error_top_items.py -i inputs/dataset_proper.tsv --top 10 --type both
+    python scripts/dataset_analysis/error_top_items.py -i inputs/dataset_proper.tsv --top 10 --type both
 
 출력:
     - 콘솔에 오차 TOP N 테이블 출력
@@ -175,8 +175,8 @@ def main():
     args = parser.parse_args()
     
     # 경로 설정
-    script_dir = Path(__file__).parent.parent
-    input_file = script_dir / args.input
+    project_root = Path(__file__).parent.parent.parent
+    input_file = project_root / args.input
     
     # 데이터 로드
     print(f'데이터 로드 중: {input_file}')

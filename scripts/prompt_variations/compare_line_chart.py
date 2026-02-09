@@ -7,17 +7,17 @@ Generate line/area charts comparing old vs new estimation errors.
 Output: line_chart_original.png, line_chart_sorted.png in the same directory as comparison.tsv
 
 Usage:
-    uv run python scripts/compare_line_chart.py \
+    uv run python scripts/prompt_variations/compare_line_chart.py \
         -i .local/prompt_results/weight-volume.v2.system/u01_이어폰팁/comparison.tsv
 
     # With custom title
-    uv run python scripts/compare_line_chart.py \
+    uv run python scripts/prompt_variations/compare_line_chart.py \
         -i .local/prompt_results/.../comparison.tsv \
         -t "이어폰팁 카테고리"
 
     # Batch
     find .local/prompt_results -name "comparison.tsv" | while read f; do
-        uv run python scripts/compare_line_chart.py -i "$f"
+        uv run python scripts/prompt_variations/compare_line_chart.py -i "$f"
     done
 """
 

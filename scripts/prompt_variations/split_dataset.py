@@ -19,18 +19,18 @@ With --name option:
 
 Usage:
     # Basic usage
-    python scripts/split_dataset.py \
+    python scripts/prompt_variations/split_dataset.py \
         -i inputs/datasource_complete.tsv \
         -p volume-weight.v002.system.txt
 
     # With experiment name
-    python scripts/split_dataset.py \
+    python scripts/prompt_variations/split_dataset.py \
         -i inputs/datasource_complete.tsv \
         -p volume-weight.v002.system.txt \
         -n baseline
 
     # Custom chunk size
-    python scripts/split_dataset.py \
+    python scripts/prompt_variations/split_dataset.py \
         -i inputs/datasource_complete.tsv \
         -p volume-weight.v002.system.txt \
         --chunk-size 200
@@ -54,7 +54,7 @@ TMP_BASE = Path(tempfile.gettempdir()) / "sz-parallel-jobs"
 
 def get_project_root() -> Path:
     """Get project root directory."""
-    return Path(__file__).parent.parent
+    return Path(__file__).parent.parent.parent
 
 
 def get_runs_dir() -> Path:
@@ -289,7 +289,7 @@ def main():
     
     print()
     print("Next step:")
-    print(f"  uv run python scripts/run_parallel.py {meta['job_id']}")
+    print(f"  uv run python scripts/prompt_variations/run_parallel.py {meta['job_id']}")
 
 
 if __name__ == "__main__":
