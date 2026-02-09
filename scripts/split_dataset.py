@@ -10,29 +10,29 @@ Creates:
   - .chunks_ready: Marker file
 
 Job ID format:
-    {serial}-{prompt_version}-{dataset_name}
-    e.g., 001-v002-datasource_complete
+    vw-{serial}-{prompt_version}-{dataset_name}
+    e.g., vw-001-v002-datasource_complete
 
 With --name option:
     {name}-{serial}-{prompt_version}-{dataset_name}
-    e.g., baseline-001-v002-datasource_complete
+    e.g., baseline-001-v002-datasource_complete (replaces vw- prefix)
 
 Usage:
     # Basic usage
     python scripts/split_dataset.py \
         -i inputs/datasource_complete.tsv \
-        -p weight-volume.v002.system.txt
+        -p volume-weight.v002.system.txt
 
     # With experiment name
     python scripts/split_dataset.py \
         -i inputs/datasource_complete.tsv \
-        -p weight-volume.v002.system.txt \
+        -p volume-weight.v002.system.txt \
         -n baseline
 
     # Custom chunk size
     python scripts/split_dataset.py \
         -i inputs/datasource_complete.tsv \
-        -p weight-volume.v002.system.txt \
+        -p volume-weight.v002.system.txt \
         --chunk-size 200
 """
 
@@ -73,9 +73,9 @@ def get_next_serial(runs_dir: Path) -> int:
         return 1
     
     max_serial = 0
-    # Pattern: optional name prefix, then 3-digit serial
-    # e.g., "001-v002-dataset" or "baseline-001-v002-dataset"
-    pattern = re.compile(r"(?:.*-)?(\d{3})-v\d{3}-")
+    # Pattern: optional name prefix (vw- or custom), then 3-digit serial
+    # e.g., "vw-001-v002-dataset" or "baseline-001-v002-dataset"
+    pattern = re.compile(r"(?:[\w]+-)?(\d{3})-v\d{3}-")
     
     for item in runs_dir.iterdir():
         if item.is_dir():
@@ -90,7 +90,7 @@ def get_next_serial(runs_dir: Path) -> int:
 def extract_prompt_version(prompt_file: str) -> str:
     """Extract version from prompt filename.
     
-    e.g., "weight-volume.v002.system.txt" -> "v002"
+    e.g., "volume-weight.v002.system.txt" -> "v002"
     """
     match = re.search(r"\.(v\d{3})\.", prompt_file)
     if match:
@@ -126,7 +126,7 @@ def generate_job_id(
     if name:
         return f"{name}-{serial:03d}-{version}-{dataset}"
     else:
-        return f"{serial:03d}-{version}-{dataset}"
+        return f"vw-{serial:03d}-{version}-{dataset}"
 
 
 def count_records(input_file: Path) -> int:
@@ -252,7 +252,7 @@ def main():
     )
     parser.add_argument(
         "-p", "--prompt", required=True,
-        help="Prompt template filename (e.g., weight-volume.v002.system.txt)"
+        help="Prompt template filename (e.g., volume-weight.v002.system.txt)"
     )
     parser.add_argument(
         "-n", "--name",
