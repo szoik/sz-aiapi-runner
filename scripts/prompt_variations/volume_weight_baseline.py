@@ -7,16 +7,16 @@ Supports multimodal input (text + image).
 
 Usage:
     # Single item
-    uv run python scripts/weight_volume.py --name "Product Name" --category "Category"
-    uv run python scripts/weight_volume.py --name "Product Name" --category "Category" --image "https://..."
-    uv run python scripts/weight_volume.py --json '{"productName": "...", "category": "...", "imageUrl": "..."}'
+    uv run python scripts/prompt_variations/volume_weight_baseline.py --name "Product Name" --category "Category"
+    uv run python scripts/prompt_variations/volume_weight_baseline.py --name "Product Name" --category "Category" --image "https://..."
+    uv run python scripts/prompt_variations/volume_weight_baseline.py --json '{"productName": "...", "category": "...", "imageUrl": "..."}'
 
     # Batch mode (JSONL file)
-    uv run python scripts/weight_volume.py --file samples/weight_volume_samples.jsonl
-    uv run python scripts/weight_volume.py --file samples/weight_volume_samples.jsonl --limit 3
+    uv run python scripts/prompt_variations/volume_weight_baseline.py --file samples/weight_volume_samples.jsonl
+    uv run python scripts/prompt_variations/volume_weight_baseline.py --file samples/weight_volume_samples.jsonl --limit 3
 
     # Batch mode with storage
-    uv run python scripts/weight_volume.py --file dataset/sample200.jsonl --store
+    uv run python scripts/prompt_variations/volume_weight_baseline.py --file dataset/sample200.jsonl --store
 """
 
 from __future__ import annotations

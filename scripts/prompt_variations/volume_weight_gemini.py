@@ -7,16 +7,16 @@ Supports multimodal input (text + image).
 
 Usage:
     # Single item
-    uv run python scripts/weight_volume_gemini.py --name "Product Name" --category "Category"
-    uv run python scripts/weight_volume_gemini.py --name "Product Name" --category "Category" --image "https://..."
-    uv run python scripts/weight_volume_gemini.py --json '{"productName": "...", "category": "...", "imageUrl": "..."}'
+    uv run python scripts/prompt_variations/volume_weight_gemini.py --name "Product Name" --category "Category"
+    uv run python scripts/prompt_variations/volume_weight_gemini.py --name "Product Name" --category "Category" --image "https://..."
+    uv run python scripts/prompt_variations/volume_weight_gemini.py --json '{"productName": "...", "category": "...", "imageUrl": "..."}'
 
     # Batch mode (JSONL file)
-    uv run python scripts/weight_volume_gemini.py --file samples/weight_volume_samples.jsonl
-    uv run python scripts/weight_volume_gemini.py --file samples/weight_volume_samples.jsonl --limit 3
+    uv run python scripts/prompt_variations/volume_weight_gemini.py --file samples/weight_volume_samples.jsonl
+    uv run python scripts/prompt_variations/volume_weight_gemini.py --file samples/weight_volume_samples.jsonl --limit 3
 
     # Batch mode with storage
-    uv run python scripts/weight_volume_gemini.py --file dataset/sample200.jsonl --store
+    uv run python scripts/prompt_variations/volume_weight_gemini.py --file dataset/sample200.jsonl --store
 
 
 Key differences from the OpenAI version:
@@ -98,7 +98,7 @@ IMPORTANT: Return ONLY the JSON object, no additional text or explanations."""
 
 def get_project_root() -> Path:
     """Get the project root directory."""
-    return Path(__file__).parent.parent
+    return Path(__file__).parent.parent.parent
 
 
 def _load_env() -> None:
