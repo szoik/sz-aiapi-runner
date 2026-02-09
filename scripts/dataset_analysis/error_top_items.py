@@ -23,13 +23,9 @@
 """
 
 import argparse
-import sys
 from pathlib import Path
 
 import pandas as pd
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from common import PROJECT_ROOT
 
 
 def load_data(input_file: str) -> pd.DataFrame:
@@ -179,7 +175,8 @@ def main():
     args = parser.parse_args()
     
     # 경로 설정
-    input_file = PROJECT_ROOT / args.input
+    project_root = Path(__file__).parent.parent.parent
+    input_file = project_root / args.input
     
     # 데이터 로드
     print(f'데이터 로드 중: {input_file}')

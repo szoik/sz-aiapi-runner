@@ -6,17 +6,17 @@ AI 추정값과 실측값 간의 오차를 구간별로 분석하고 시각화�
 분석 대상: Max Dim, Mid Dim, Min Dim, Volume, Weight
 
 사용법:
-    python scripts/error_distribution.py [--input INPUT_FILE] [--name NAME]
+    python scripts/dataset_analysis/error_distribution.py [--input INPUT_FILE] [--name NAME]
 
 예시:
     # 기본 실행 (datasource_complete.tsv)
-    python scripts/error_distribution.py
+    python scripts/dataset_analysis/error_distribution.py
     
     # 특정 카테고리 분석
-    python scripts/error_distribution.py -i inputs/categories/o01_보이그룹_인형피규어_err50.tsv
+    python scripts/dataset_analysis/error_distribution.py -i inputs/categories/o01_보이그룹_인형피규어_err50.tsv
     
     # 커스텀 이름 지정
-    python scripts/error_distribution.py -i inputs/datasource_complete.tsv --name baseline
+    python scripts/dataset_analysis/error_distribution.py -i inputs/datasource_complete.tsv --name baseline
 
 출력 경로: artifacts/dataset_analysis/vw-{serial}-{dataset명}/
     - error_distribution.png: 오차 분포 시각화
@@ -38,7 +38,7 @@ import numpy as np
 
 def get_project_root() -> Path:
     """Get project root directory."""
-    return Path(__file__).parent.parent
+    return Path(__file__).parent.parent.parent
 
 
 def get_dataset_analysis_dir() -> Path:

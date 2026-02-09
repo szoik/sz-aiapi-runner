@@ -8,22 +8,22 @@ Output: comparison.png, scatter.png, stats.md in the same directory as compariso
 
 Usage:
     # Generate visualization (output to same directory as comparison.tsv)
-    uv run python scripts/compare_prompts.py \
+    uv run python scripts/prompt_variations/compare_prompts.py \
         -i .local/prompt_results/weight-volume.v2.system/full/20250202-143052/comparison.tsv
 
     # With custom title
-    uv run python scripts/compare_prompts.py \
+    uv run python scripts/prompt_variations/compare_prompts.py \
         -i .local/prompt_results/.../comparison.tsv \
         -t "로봇완구 카테고리"
 
     # Custom output prefix
-    uv run python scripts/compare_prompts.py \
+    uv run python scripts/prompt_variations/compare_prompts.py \
         -i .local/prompt_results/.../comparison.tsv \
         -o custom/path/prefix
 
     # Batch visualization
     find .local/prompt_results -name "comparison.tsv" | while read f; do
-        uv run python scripts/compare_prompts.py -i "$f"
+        uv run python scripts/prompt_variations/compare_prompts.py -i "$f"
     done
 """
 
@@ -336,7 +336,7 @@ def main():
         print()
         print("Next step:")
         title_arg = f' -t "{args.title}"' if args.title else ""
-        print(f"  uv run python scripts/compare_line_chart.py \\")
+        print(f"  uv run python scripts/prompt_variations/compare_line_chart.py \\")
         print(f"    -i {args.input}{title_arg}")
     
     sys.exit(0 if count > 0 else 1)

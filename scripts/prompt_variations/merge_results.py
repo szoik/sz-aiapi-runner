@@ -9,19 +9,19 @@ Output: comparison.tsv in the same directory as result.tsv
 
 Usage:
     # Merge (output to same directory as result.tsv)
-    uv run python scripts/merge_results.py \
+    uv run python scripts/prompt_variations/merge_results.py \
         -d inputs/datasource_complete.tsv \
         -r .local/prompt_results/weight-volume.v2.system/datasource_complete/result.tsv
 
     # Custom output path
-    uv run python scripts/merge_results.py \
+    uv run python scripts/prompt_variations/merge_results.py \
         -d inputs/datasource_complete.tsv \
         -r .local/prompt_results/.../result.tsv \
         -o custom/path/comparison.tsv
 
     # Batch merge
     find .local/prompt_results -name "result.tsv" | while read f; do
-        uv run python scripts/merge_results.py \
+        uv run python scripts/prompt_variations/merge_results.py \
             -d inputs/datasource_complete.tsv \
             -r "$f"
     done
@@ -230,7 +230,7 @@ def main():
     if matched > 0:
         print()
         print("Next step:")
-        print(f"  uv run python scripts/compare_prompts.py \\")
+        print(f"  uv run python scripts/prompt_variations/compare_prompts.py \\")
         print(f"    -i {output_file}")
     
     sys.exit(0 if matched > 0 else 1)
