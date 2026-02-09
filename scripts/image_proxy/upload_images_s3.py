@@ -3,23 +3,23 @@
 
 Usage:
     # Upload from default images folder (first 1000 items)
-    python scripts/upload_images_s3.py --limit 1000
+    python scripts/image_proxy/upload_images_s3.py --limit 1000
 
     # Upload from specific folder (ix1, ix2, etc.)
-    python scripts/upload_images_s3.py --use ix1 --limit 1000
-    python scripts/upload_images_s3.py --use ix2
+    python scripts/image_proxy/upload_images_s3.py --use ix1 --limit 1000
+    python scripts/image_proxy/upload_images_s3.py --use ix2
 
     # Continue from where it stopped
-    python scripts/upload_images_s3.py --use ix1 --limit 1000
+    python scripts/image_proxy/upload_images_s3.py --use ix1 --limit 1000
 
     # Start over from beginning
-    python scripts/upload_images_s3.py --use ix1 --startover
+    python scripts/image_proxy/upload_images_s3.py --use ix1 --startover
 
     # Retry only failed items
-    python scripts/upload_images_s3.py --use ix1 --retry-failed
+    python scripts/image_proxy/upload_images_s3.py --use ix1 --retry-failed
 
     # Upload specific files from a list
-    python scripts/upload_images_s3.py --input-list .local/basedata/upload_list.txt
+    python scripts/image_proxy/upload_images_s3.py --input-list .local/basedata/upload_list.txt
 """
 
 import argparse
@@ -40,7 +40,7 @@ class UploadStats:
 
 
 # Default paths
-BASE_DIR = Path(__file__).parent.parent / ".local" / "basedata"
+BASE_DIR = Path(__file__).parent.parent.parent / ".local" / "basedata"
 DEFAULT_IMAGES_DIR = BASE_DIR / "images"
 DEFAULT_UPLOAD_LIST = BASE_DIR / "upload_list.txt"
 

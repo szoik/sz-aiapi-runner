@@ -3,19 +3,19 @@
 
 Usage:
     # Download first 1000 items
-    python scripts/download_images.py --limit 1000
+    python scripts/image_proxy/download_images.py --limit 1000
     
     # Continue from where it stopped
-    python scripts/download_images.py --limit 1000
+    python scripts/image_proxy/download_images.py --limit 1000
     
     # Start over from beginning
-    python scripts/download_images.py --startover
+    python scripts/image_proxy/download_images.py --startover
     
     # Retry only failed items
-    python scripts/download_images.py --retry-failed
+    python scripts/image_proxy/download_images.py --retry-failed
     
     # Slower, gentler download
-    python scripts/download_images.py --concurrent 5 --delay 0.2
+    python scripts/image_proxy/download_images.py --concurrent 5 --delay 0.2
 """
 
 import argparse
@@ -36,7 +36,7 @@ class DownloadStats:
 
 
 # Default paths
-BASE_DIR = Path(__file__).parent.parent / ".local" / "basedata"
+BASE_DIR = Path(__file__).parent.parent.parent / ".local" / "basedata"
 DEFAULT_INPUT = BASE_DIR / "image_download_list.tsv"
 DEFAULT_OUTPUT_DIR = BASE_DIR / "images"
 RESUME_FILE = BASE_DIR / "image_download_resume.txt"

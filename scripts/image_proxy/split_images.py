@@ -10,13 +10,13 @@ Structure:
 
 Usage:
     # Dry run - show what would happen (default)
-    python scripts/split_images.py
+    python scripts/image_proxy/split_images.py
     
     # Actually move files
-    python scripts/split_images.py --execute
+    python scripts/image_proxy/split_images.py --execute
     
     # Custom batch size
-    python scripts/split_images.py --batch-size 3000 --execute
+    python scripts/image_proxy/split_images.py --batch-size 3000 --execute
 """
 
 import argparse
@@ -24,7 +24,7 @@ import shutil
 from pathlib import Path
 
 
-BASE_DIR = Path(__file__).parent.parent / ".local" / "basedata"
+BASE_DIR = Path(__file__).parent.parent.parent / ".local" / "basedata"
 IMAGES_DIR = BASE_DIR / "images"
 DEFAULT_BATCH_SIZE = 5000
 

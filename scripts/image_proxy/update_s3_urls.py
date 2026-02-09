@@ -53,8 +53,13 @@ def update_tsv_file(file_path: str, url_mapping: dict) -> tuple:
     
     return (updated_count, len(rows))
 
+def get_project_root() -> Path:
+    """Get project root directory."""
+    return Path(__file__).parent.parent.parent
+
+
 def main():
-    base_dir = Path('/Users/great/github.com/sazo-korea-shop/sz-aiapi-runner/inputs')
+    base_dir = get_project_root() / 'inputs'
     
     # 매핑 로드
     print("Loading URL mapping from dataset_proper.tsv...")
