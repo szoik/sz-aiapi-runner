@@ -1,0 +1,23 @@
+# 오차 TOP 5 항목
+입력 파일: inputs/categories/o01_보이그룹_인형피규어_err50.tsv
+총 데이터: 168건
+
+### 과대추정 TOP 5 (o01_보이그룹_인형피규어_err50)
+
+| # | 오차율 | AI | 실측 | URL |
+|---|--------|----|----|-----|
+| 1 | +566.7% | 800g | 120g | https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/9b9308dc-a121-4e0e-8461-b669c942677c.jpg |
+| 2 | +361.5% | 300g | 65g | https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/0b576010-feeb-4c38-8e90-d69ec4ce9d3d.jpg |
+| 3 | +334.8% | 500g | 115g | https://media.bunjang.co.kr/product/310232453_1_1736221124_w{res}.jpg |
+| 4 | +252.9% | 300g | 85g | https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/c8d814b7-46b1-42ae-a0ab-1addcde5062a.jpg |
+| 5 | +252.9% | 300g | 85g | https://media.bunjang.co.kr/product/280913527_{cnt}_1725511963_w{res}.jpg |
+
+### 과소추정 TOP 5 (o01_보이그룹_인형피규어_err50)
+
+| # | 오차율 | AI | 실측 | URL |
+|---|--------|----|----|-----|
+| 1 | -89.3% | 100g | 935g | https://media.bunjang.co.kr/product/309304753_1_1735782223_w{res}.jpg |
+| 2 | -85.5% | 300g | 2.1kg | https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/e63a300d-5dc6-4f8e-8a4f-8c928ccbc12e.jpg |
+| 3 | -84.2% | 300g | 1.9kg | https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/c2c23573-06b6-4248-aacf-6c72dbda4046.jpg |
+| 4 | -80.1% | 300g | 1.5kg | https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/9abb0b90-b1b7-49df-9e10-eb8e12f5e572.jpg |
+| 5 | -78.9% | 300g | 1.4kg | https://media.bunjang.co.kr/product/308850201_1_1735534763_w{res}.jpg |
