@@ -208,9 +208,9 @@ def main():
     args = parser.parse_args()
     
     # 경로 설정
-    script_dir = Path(__file__).parent.parent
-    input_file = script_dir / args.input
-    output_dir = script_dir / args.output
+    from common import PROJECT_ROOT
+    input_file = PROJECT_ROOT / args.input
+    output_dir = PROJECT_ROOT / args.output
     
     # 출력 디렉토리 생성
     output_dir.mkdir(parents=True, exist_ok=True)

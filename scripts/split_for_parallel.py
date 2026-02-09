@@ -22,15 +22,12 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-
-def get_project_root() -> Path:
-    """Get project root directory."""
-    return Path(__file__).parent.parent
+from common import PROJECT_ROOT
 
 
 def get_jobs_dir() -> Path:
     """Get parallel jobs directory."""
-    return get_project_root() / ".local" / "parallel_jobs"
+    return PROJECT_ROOT / ".local" / "parallel_jobs"
 
 
 def count_records(tsv_path: Path) -> int:

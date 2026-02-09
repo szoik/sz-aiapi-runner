@@ -12,10 +12,7 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 
-
-def get_project_root() -> Path:
-    """Get project root directory."""
-    return Path(__file__).parent.parent
+from common import PROJECT_ROOT
 
 
 def read_existing_tsv_header(tsv_path: Path) -> list[str]:
@@ -128,11 +125,9 @@ def convert_jsonl_to_tsv(
 
 def main():
     """Main entry point."""
-    project_root = get_project_root()
-
     # Paths
-    jsonl_path = project_root / '.local' / 'basedata' / 'single_item_kse_full_20260203.jsonl'
-    tsv_path = project_root / 'inputs' / 'datasource.tsv'
+    jsonl_path = PROJECT_ROOT / '.local' / 'basedata' / 'single_item_kse_full_20260203.jsonl'
+    tsv_path = PROJECT_ROOT / 'inputs' / 'datasource.tsv'
 
     print("=" * 60)
     print("JSONL to TSV Converter")

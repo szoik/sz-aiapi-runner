@@ -23,12 +23,16 @@ Usage:
 """
 
 import argparse
+import sys
 import boto3
 from botocore.exceptions import ClientError
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
 import mimetypes
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from common import PROJECT_ROOT
 
 
 @dataclass
@@ -40,7 +44,7 @@ class UploadStats:
 
 
 # Default paths
-BASE_DIR = Path(__file__).parent.parent.parent / ".local" / "basedata"
+BASE_DIR = PROJECT_ROOT / ".local" / "basedata"
 DEFAULT_IMAGES_DIR = BASE_DIR / "images"
 DEFAULT_UPLOAD_LIST = BASE_DIR / "upload_list.txt"
 

@@ -60,7 +60,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from common import (
     get_openai_client,
-    get_project_root,
+    PROJECT_ROOT,
     load_prompt_template,
     build_user_content,
     call_openai_json,
@@ -76,7 +76,7 @@ def generate_output_path(
     prompt_name = Path(prompt_file).stem  # e.g., "weight-volume.v2.system"
     input_name = Path(input_file).stem    # e.g., "datasource" or "로봇완구"
     
-    base = get_project_root() / ".local" / "prompt_results" / prompt_name
+    base = PROJECT_ROOT / ".local" / "prompt_results" / prompt_name
     output_dir = base / f"{timestamp}-{input_name}"
     
     output_dir.mkdir(parents=True, exist_ok=True)

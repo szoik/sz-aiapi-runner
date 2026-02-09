@@ -13,8 +13,16 @@ from dotenv import load_dotenv
 
 
 def get_project_root() -> Path:
-    """Get the project root directory."""
-    return Path(__file__).parent.parent
+    """Get the project root directory by searching for pyproject.toml."""
+    path = Path(__file__).resolve()
+    while path != path.parent:
+        if (path / "pyproject.toml").exists():
+            return path
+        path = path.parent
+    raise RuntimeError("Project root not found (no pyproject.toml)")
+
+
+PROJECT_ROOT = get_project_root()
 
 
 def _load_env() -> None:

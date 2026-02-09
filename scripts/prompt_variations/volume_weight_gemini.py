@@ -96,14 +96,14 @@ Return your estimation in the following JSON format:
 IMPORTANT: Return ONLY the JSON object, no additional text or explanations."""
 
 
-def get_project_root() -> Path:
-    """Get the project root directory."""
-    return Path(__file__).parent.parent.parent
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from common import PROJECT_ROOT
 
 
 def _load_env() -> None:
     """Load environment variables from .env file."""
-    env_path = get_project_root() / ".env"
+    env_path = PROJECT_ROOT / ".env"
     if env_path.exists():
         load_dotenv(env_path)
 
@@ -308,14 +308,14 @@ def process_single_item(
 def create_output_dir(dataset_count: int) -> Path:
     """Create output directory with timestamp and dataset count."""
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    output_dir = get_project_root() / ".local" / f"gemini-{timestamp}-{dataset_count}"
+    output_dir = PROJECT_ROOT / ".local" / f"gemini-{timestamp}-{dataset_count}"
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
 
 
 def setup_logging() -> None:
     """Setup logging to combined log file at .local/weight-volume-gemini-run.log."""
-    log_dir = get_project_root() / ".local"
+    log_dir = PROJECT_ROOT / ".local"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / "weight-volume-gemini-run.log"
 

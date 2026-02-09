@@ -21,10 +21,7 @@ from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
 
-
-def get_project_root() -> Path:
-    """Get project root directory."""
-    return Path(__file__).parent.parent
+from common import PROJECT_ROOT
 
 
 def read_jsonl(jsonl_path: Path) -> list[dict]:
@@ -169,12 +166,10 @@ def generate_category_files(records: list[dict], columns: list[str], categories_
 
 def main():
     """Main entry point."""
-    project_root = get_project_root()
-    
     # Paths
-    jsonl_path = project_root / '.local' / 'basedata' / 'single_item_kse_full_20260203.jsonl'
-    inputs_dir = project_root / 'inputs'
-    backup_dir = project_root / '.local' / 'backups'
+    jsonl_path = PROJECT_ROOT / '.local' / 'basedata' / 'single_item_kse_full_20260203.jsonl'
+    inputs_dir = PROJECT_ROOT / 'inputs'
+    backup_dir = PROJECT_ROOT / '.local' / 'backups'
     
     print("=" * 60)
     print("Regenerate Derived Datasets from JSONL")
