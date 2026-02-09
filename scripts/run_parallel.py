@@ -55,7 +55,7 @@ def get_project_root() -> Path:
 def get_jobs_dir() -> Path:
     """Get runs directory."""
     # Check new location first, fallback to legacy
-    new_dir = get_project_root() / ".local" / "runs"
+    new_dir = get_project_root() / "artifacts" / "runs"
     legacy_dir = get_project_root() / ".local" / "parallel_jobs"
     
     # Return new dir if it exists or legacy doesn't exist
@@ -66,7 +66,7 @@ def get_jobs_dir() -> Path:
 
 def get_job_dir(job_id: str) -> Path:
     """Get job directory, checking both new and legacy locations."""
-    new_dir = get_project_root() / ".local" / "runs" / job_id
+    new_dir = get_project_root() / "artifacts" / "runs" / job_id
     legacy_dir = get_project_root() / ".local" / "parallel_jobs" / job_id
     
     # Return existing location, prefer new
