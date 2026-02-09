@@ -25,8 +25,10 @@ import argparse
 import csv
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from concurrent.futures import ProcessPoolExecutor, Future
@@ -41,19 +43,49 @@ from rich.table import Table
 from rich.text import Text
 
 
+# Temp directory for chunks
+TMP_BASE = Path(tempfile.gettempdir()) / "sz-parallel-jobs"
+
+
 def get_project_root() -> Path:
     """Get project root directory."""
     return Path(__file__).parent.parent.resolve()
 
 
 def get_jobs_dir() -> Path:
-    """Get parallel jobs directory."""
-    return get_project_root() / ".local" / "parallel_jobs"
+    """Get runs directory."""
+    # Check new location first, fallback to legacy
+    new_dir = get_project_root() / ".local" / "runs"
+    legacy_dir = get_project_root() / ".local" / "parallel_jobs"
+    
+    # Return new dir if it exists or legacy doesn't exist
+    if new_dir.exists() or not legacy_dir.exists():
+        return new_dir
+    return legacy_dir
+
+
+def get_job_dir(job_id: str) -> Path:
+    """Get job directory, checking both new and legacy locations."""
+    new_dir = get_project_root() / ".local" / "runs" / job_id
+    legacy_dir = get_project_root() / ".local" / "parallel_jobs" / job_id
+    
+    # Return existing location, prefer new
+    if new_dir.exists():
+        return new_dir
+    if legacy_dir.exists():
+        return legacy_dir
+    # Default to new location for new jobs
+    return new_dir
+
+
+def get_tmp_job_dir(job_id: str) -> Path:
+    """Get temp directory for job chunks."""
+    return TMP_BASE / job_id
 
 
 def load_job_meta(job_id: str) -> Optional[dict]:
     """Load job metadata."""
-    job_dir = get_jobs_dir() / job_id
+    job_dir = get_job_dir(job_id)
     meta_file = job_dir / "meta.json"
     
     if not meta_file.exists():
@@ -63,11 +95,15 @@ def load_job_meta(job_id: str) -> Optional[dict]:
         return json.load(f)
 
 
-def get_pending_chunks(job_dir: Path) -> list[Path]:
+def get_pending_chunks(job_id: str) -> list[Path]:
     """Get list of chunks that haven't completed yet."""
-    chunks_dir = job_dir / "chunks"
-    pending = []
+    tmp_job_dir = get_tmp_job_dir(job_id)
+    chunks_dir = tmp_job_dir / "chunks"
     
+    if not chunks_dir.exists():
+        return []
+    
+    pending = []
     for chunk_dir in sorted(chunks_dir.iterdir()):
         if not chunk_dir.is_dir():
             continue
@@ -79,11 +115,15 @@ def get_pending_chunks(job_dir: Path) -> list[Path]:
     return pending
 
 
-def get_completed_chunks(job_dir: Path) -> list[Path]:
+def get_completed_chunks(job_id: str) -> list[Path]:
     """Get list of completed chunks."""
-    chunks_dir = job_dir / "chunks"
-    completed = []
+    tmp_job_dir = get_tmp_job_dir(job_id)
+    chunks_dir = tmp_job_dir / "chunks"
     
+    if not chunks_dir.exists():
+        return []
+    
+    completed = []
     for chunk_dir in sorted(chunks_dir.iterdir()):
         if not chunk_dir.is_dir():
             continue
@@ -165,10 +205,11 @@ def run_chunk(chunk_dir: Path, prompt_file: str) -> tuple[str, bool, str]:
         return (chunk_id, False, str(e))
 
 
-def merge_results(job_dir: Path) -> Optional[Path]:
+def merge_results(job_id: str, job_dir: Path) -> Optional[Path]:
     """Merge all chunk results into final result file."""
-    chunks_dir = job_dir / "chunks"
-    completed = get_completed_chunks(job_dir)
+    tmp_job_dir = get_tmp_job_dir(job_id)
+    chunks_dir = tmp_job_dir / "chunks"
+    completed = get_completed_chunks(job_id)
     
     if not completed:
         print("No completed chunks to merge")
@@ -387,15 +428,17 @@ def run_parallel(
         console.print(f"[red]ERROR: Job not found: {job_id}[/red]")
         return 0
     
-    # Check if chunks are ready
-    ready_marker = job_dir / ".chunks_ready"
+    # Check if chunks are ready (in tmp dir)
+    tmp_job_dir = get_tmp_job_dir(job_id)
+    ready_marker = tmp_job_dir / ".chunks_ready"
     if not ready_marker.exists():
         console.print("[red]ERROR: Chunks not ready (missing .chunks_ready marker)[/red]")
+        console.print(f"[dim]Expected at: {ready_marker}[/dim]")
         return 0
     
     prompt_file = meta["prompt_file"]
-    pending = get_pending_chunks(job_dir)
-    completed = get_completed_chunks(job_dir)
+    pending = get_pending_chunks(job_id)
+    completed = get_completed_chunks(job_id)
     total_chunks = meta["chunk_count"]
     
     console.print(f"[bold]Job:[/bold] {job_id}  [bold]Prompt:[/bold] {prompt_file}")
@@ -544,7 +587,7 @@ def run_parallel(
     console.print(f"[green]Completed: {success_count}[/green], [red]Failed: {fail_count}[/red]")
     
     # Check if all done
-    remaining = get_pending_chunks(job_dir)
+    remaining = get_pending_chunks(job_id)
     if not remaining:
         console.print("[bold green]All chunks completed![/bold green]")
         console.print()
@@ -581,7 +624,7 @@ def main():
     
     args = parser.parse_args()
     
-    job_dir = get_jobs_dir() / args.job_id
+    job_dir = get_job_dir(args.job_id)
     
     if args.status:
         meta = load_job_meta(args.job_id)
@@ -589,8 +632,8 @@ def main():
             print(f"Job not found: {args.job_id}")
             sys.exit(1)
         
-        pending = get_pending_chunks(job_dir)
-        completed = get_completed_chunks(job_dir)
+        pending = get_pending_chunks(args.job_id)
+        completed = get_completed_chunks(args.job_id)
         
         print(f"Job: {args.job_id}")
         print(f"Input: {meta['input_file']}")
@@ -609,7 +652,16 @@ def main():
         sys.exit(0)
     
     if args.merge:
-        output = merge_results(job_dir)
+        meta = load_job_meta(args.job_id)
+        output = merge_results(args.job_id, job_dir)
+        if output:
+            print()
+            print("Next step:")
+            comparison_path = job_dir / "comparison.tsv"
+            print(f"  uv run python scripts/merge_results.py \\")
+            print(f"    -d {meta['input_file']} \\")
+            print(f"    -r {output} \\")
+            print(f"    -o {comparison_path}")
         sys.exit(0 if output else 1)
     
     success = run_parallel(

@@ -332,6 +332,13 @@ def main():
         title=args.title,
     )
     
+    if count > 0:
+        print()
+        print("Next step:")
+        title_arg = f' -t "{args.title}"' if args.title else ""
+        print(f"  uv run python scripts/compare_line_chart.py \\")
+        print(f"    -i {args.input}{title_arg}")
+    
     sys.exit(0 if count > 0 else 1)
 
 

@@ -2,9 +2,12 @@
 """
 Split dataset into chunks for parallel processing.
 
-Creates a job directory with:
-- meta.json: Job metadata (input file, prompt, chunk info)
-- chunks/NNNN/input.tsv: Chunked input files
+Creates:
+- Job directory (.local/parallel_jobs/{job_id}/):
+  - meta.json: Job metadata (input file, prompt, chunk info)
+- Temp directory (/tmp/sz-parallel-jobs/{job_id}/):
+  - chunks/NNNN/input.tsv: Chunked input files
+  - .chunks_ready: Marker file
 
 Usage:
     # Split with default chunk size (100 records per chunk)
@@ -31,13 +34,23 @@ import argparse
 import csv
 import json
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
+
+
+# Temp directory for chunks
+TMP_BASE = Path(tempfile.gettempdir()) / "sz-parallel-jobs"
 
 
 def get_project_root() -> Path:
     """Get project root directory."""
     return Path(__file__).parent.parent
+
+
+def get_tmp_job_dir(job_id: str) -> Path:
+    """Get temp directory for job chunks."""
+    return TMP_BASE / job_id
 
 
 def count_records(input_file: Path) -> int:
@@ -68,10 +81,14 @@ def split_dataset(
     print(f"Chunks to create: {chunk_count}")
     print("-" * 60)
     
-    # Create job directory
+    # Create job directory (for metadata and final results)
     job_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     job_dir = output_dir / job_id
-    chunks_dir = job_dir / "chunks"
+    job_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Create temp directory for chunks
+    tmp_job_dir = get_tmp_job_dir(job_id)
+    chunks_dir = tmp_job_dir / "chunks"
     
     # Create all chunk directories first
     for i in range(1, chunk_count + 1):
@@ -125,19 +142,21 @@ def split_dataset(
         "chunk_size": chunk_size,
         "chunk_count": chunk_count,
         "status": "ready",
+        "tmp_dir": str(tmp_job_dir),
     }
     
     meta_file = job_dir / "meta.json"
     with open(meta_file, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
     
-    # Mark chunks as ready
-    ready_marker = job_dir / ".chunks_ready"
+    # Mark chunks as ready (in tmp dir)
+    ready_marker = tmp_job_dir / ".chunks_ready"
     ready_marker.touch()
     
     print("-" * 60)
     print(f"Job created: {job_id}")
     print(f"Job directory: {job_dir}")
+    print(f"Chunks directory: {chunks_dir}")
     print(f"Metadata: {meta_file}")
     
     return meta
@@ -174,7 +193,7 @@ def main():
     if args.output:
         output_dir = Path(args.output)
     else:
-        output_dir = get_project_root() / ".local" / "parallel_jobs"
+        output_dir = get_project_root() / ".local" / "runs"
     
     meta = split_dataset(
         input_file=input_file,

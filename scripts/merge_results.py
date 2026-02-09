@@ -227,6 +227,12 @@ def main():
         output_file=output_file,
     )
     
+    if matched > 0:
+        print()
+        print("Next step:")
+        print(f"  uv run python scripts/compare_prompts.py \\")
+        print(f"    -i {output_file}")
+    
     sys.exit(0 if matched > 0 else 1)
 
 

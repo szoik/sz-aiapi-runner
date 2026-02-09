@@ -197,6 +197,11 @@ def main():
         title=args.title,
     )
     
+    if count > 0:
+        print()
+        print("Pipeline complete!")
+        print(f"Results saved to: {output_dir}/")
+    
     sys.exit(0 if count > 0 else 1)
 
 
