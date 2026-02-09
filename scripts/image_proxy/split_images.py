@@ -21,14 +21,10 @@ Usage:
 
 import argparse
 import shutil
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from common import PROJECT_ROOT
 
-
-BASE_DIR = PROJECT_ROOT / ".local" / "basedata"
+BASE_DIR = Path(__file__).parent.parent.parent / ".local" / "basedata"
 IMAGES_DIR = BASE_DIR / "images"
 DEFAULT_BATCH_SIZE = 5000
 

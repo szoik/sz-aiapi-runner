@@ -22,13 +22,9 @@ import argparse
 import csv
 import asyncio
 import aiohttp
-import sys
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from common import PROJECT_ROOT
 
 
 @dataclass
@@ -40,7 +36,7 @@ class DownloadStats:
 
 
 # Default paths
-BASE_DIR = PROJECT_ROOT / ".local" / "basedata"
+BASE_DIR = Path(__file__).parent.parent.parent / ".local" / "basedata"
 DEFAULT_INPUT = BASE_DIR / "image_download_list.tsv"
 DEFAULT_OUTPUT_DIR = BASE_DIR / "images"
 RESUME_FILE = BASE_DIR / "image_download_resume.txt"

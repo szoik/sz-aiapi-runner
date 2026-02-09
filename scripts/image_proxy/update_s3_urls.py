@@ -8,11 +8,7 @@ dataset_proper.tsv의 id → thumbnail_url 매핑을 사용하여
 
 import os
 import csv
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from common import PROJECT_ROOT
 
 def load_url_mapping(source_file: str) -> dict:
     """dataset_proper.tsv에서 item_id → thumbnail_urls 매핑을 로드합니다."""
@@ -57,8 +53,13 @@ def update_tsv_file(file_path: str, url_mapping: dict) -> tuple:
     
     return (updated_count, len(rows))
 
+def get_project_root() -> Path:
+    """Get project root directory."""
+    return Path(__file__).parent.parent.parent
+
+
 def main():
-    base_dir = PROJECT_ROOT / 'inputs'
+    base_dir = get_project_root() / 'inputs'
     
     # 매핑 로드
     print("Loading URL mapping from dataset_proper.tsv...")
