@@ -6,33 +6,94 @@ AI 추정값과 실측값 간의 오차를 구간별로 분석하고 시각화�
 분석 대상: Max Dim, Mid Dim, Min Dim, Volume, Weight
 
 사용법:
-    python scripts/error_distribution.py [--input INPUT_FILE] [--output OUTPUT_DIR] [--prefix PREFIX]
+    python scripts/error_distribution.py [--input INPUT_FILE] [--name NAME]
 
 예시:
-    # 기본 실행
+    # 기본 실행 (datasource_complete.tsv)
     python scripts/error_distribution.py
     
-    # 과대추정 1위 카테고리 분석 (접두어 o01)
-    python scripts/error_distribution.py -i .local/tmp/category_datasets/boygroup_figure.tsv \
-        -o .local/tmp/category_datasets/boygroup_figure_analysis -p o01
+    # 특정 카테고리 분석
+    python scripts/error_distribution.py -i inputs/categories/o01_보이그룹_인형피규어_err50.tsv
     
-    # 과소추정 1위 카테고리 분석 (접두어 u01)
-    python scripts/error_distribution.py -i .local/tmp/category_datasets/robot_toy.tsv \
-        -o .local/tmp/category_datasets/robot_toy_analysis -p u01
+    # 커스텀 이름 지정
+    python scripts/error_distribution.py -i inputs/datasource_complete.tsv --name baseline
 
-출력:
-    - 콘솔에 구간별 분포 테이블 출력
-    - 이미지 파일로 시각화 저장 (error_distribution.png)
+출력 경로: artifacts/dataset_analysis/vw-{serial}-{dataset명}/
+    - error_distribution.png: 오차 분포 시각화
+    - error_distribution_summary.csv: 요약 테이블
+    - error_distribution.txt: 상세 분포 테이블
+    - meta.json: 메타 정보
 """
 
 import argparse
-import os
+import json
+import re
 from datetime import datetime
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+
+
+def get_project_root() -> Path:
+    """Get project root directory."""
+    return Path(__file__).parent.parent
+
+
+def get_dataset_analysis_dir() -> Path:
+    """Get dataset analysis output directory."""
+    return get_project_root() / "artifacts" / "dataset_analysis"
+
+
+def get_next_serial(analysis_dir: Path) -> int:
+    """Get next serial number by scanning existing analysis directories."""
+    if not analysis_dir.exists():
+        return 1
+    
+    max_serial = 0
+    pattern = re.compile(r"(?:[\w]+-)?(\d{3})-")
+    
+    for item in analysis_dir.iterdir():
+        if item.is_dir():
+            match = pattern.match(item.name)
+            if match:
+                serial = int(match.group(1))
+                max_serial = max(max_serial, serial)
+    
+    return max_serial + 1
+
+
+def extract_dataset_name(input_file: Path) -> str:
+    """Extract dataset name from input file path."""
+    return input_file.stem
+
+
+def generate_analysis_id(analysis_dir: Path, input_file: Path, name: str = None) -> str:
+    """Generate analysis ID like vw-001-datasource_complete."""
+    serial = get_next_serial(analysis_dir)
+    dataset = extract_dataset_name(input_file)
+    
+    if name:
+        return f"{name}-{serial:03d}-{dataset}"
+    else:
+        return f"vw-{serial:03d}-{dataset}"
+
+
+def save_meta(output_dir: Path, input_file: Path, analysis_id: str):
+    """Save meta.json with analysis information."""
+    meta = {
+        "analysis_id": analysis_id,
+        "input_file": str(input_file),
+        "created_at": datetime.now().isoformat(),
+        "type": "dataset_analysis"
+    }
+    
+    meta_path = output_dir / "meta.json"
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=2, ensure_ascii=False)
+    
+    print(f"메타 정보 저장: {meta_path}")
 
 # 한글 폰트 설정 (macOS)
 plt.rcParams['font.family'] = ['AppleGothic', 'DejaVu Sans']
@@ -262,53 +323,52 @@ def create_summary_table(df: pd.DataFrame, output_path: str):
 
 def main():
     parser = argparse.ArgumentParser(description='오차 구간별 분포 분석')
-    parser.add_argument('--input', '-i', default='inputs/datasource.tsv',
-                        help='입력 데이터 파일 (기본: inputs/datasource.tsv)')
-    parser.add_argument('--output', '-o', default='.local/tmp/error_analysis',
-                        help='출력 디렉토리 (기본: .local/tmp/error_analysis)')
-    parser.add_argument('--title', '-t', default=None,
-                        help='차트 제목 (기본: 입력 파일명에서 추출)')
-    parser.add_argument('--prefix', '-p', default=None,
-                        help='출력 폴더명 접두어 (예: o01, u02 등)')
+    parser.add_argument('--input', '-i', default='inputs/datasource_complete.tsv',
+                        help='입력 데이터 파일 (기본: inputs/datasource_complete.tsv)')
+    parser.add_argument('--name', '-n', default=None,
+                        help='분석 이름 접두어 (기본: vw)')
     args = parser.parse_args()
     
     # 경로 설정
-    script_dir = Path(__file__).parent.parent
-    input_file = script_dir / args.input
+    project_root = get_project_root()
+    input_file = project_root / args.input
     
-    # 출력 디렉토리 설정 (접두어 적용)
-    if args.prefix:
-        # 기존 출력 경로의 마지막 폴더명에 접두어 추가
-        output_base = Path(args.output)
-        output_dir = script_dir / output_base.parent / f"{args.prefix}-{output_base.name}"
-    else:
-        output_dir = script_dir / args.output
+    if not input_file.exists():
+        print(f"오류: 입력 파일을 찾을 수 없습니다: {input_file}")
+        return
+    
+    # 출력 디렉토리 설정
+    analysis_dir = get_dataset_analysis_dir()
+    analysis_id = generate_analysis_id(analysis_dir, input_file, args.name)
+    output_dir = analysis_dir / analysis_id
     
     # 출력 디렉토리 생성
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # 제목 설정 (입력 파일명에서 추출하거나 인자로 받음)
-    if args.title:
-        chart_title = args.title
-    else:
-        # 파일명에서 제목 추출 (예: doll_figure_unique.tsv -> doll_figure_unique)
-        chart_title = input_file.stem
+    print(f"분석 ID: {analysis_id}")
+    print(f"출력 경로: {output_dir}")
+    
+    # 제목 설정 (입력 파일명에서 추출)
+    chart_title = extract_dataset_name(input_file)
     
     # 데이터 로드
     print(f"데이터 로드 중: {input_file}")
     df = load_data(input_file)
     
-    # 타임스탬프 생성
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    # 메타 정보 저장
+    save_meta(output_dir, input_file, analysis_id)
     
     # 콘솔 출력 및 텍스트 파일 저장
-    print_distribution(df, output_dir / f'{timestamp}_error_distribution.txt')
+    print_distribution(df, output_dir / 'error_distribution.txt')
     
     # 시각화 저장
-    create_visualization(df, output_dir / f'{timestamp}_error_distribution.png', chart_title)
+    create_visualization(df, output_dir / 'error_distribution.png', chart_title)
     
     # 요약 테이블 저장
-    create_summary_table(df, output_dir / f'{timestamp}_error_distribution_summary.csv')
+    create_summary_table(df, output_dir / 'error_distribution_summary.csv')
+    
+    print(f"\n다음 단계:")
+    print(f"  결과 확인: open {output_dir}")
 
 
 if __name__ == '__main__':
