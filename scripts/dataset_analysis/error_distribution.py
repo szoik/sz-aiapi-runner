@@ -28,6 +28,7 @@ AI 추정값과 실측값 간의 오차를 구간별로 분석하고 시각화�
 import argparse
 import json
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -35,15 +36,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-
-def get_project_root() -> Path:
-    """Get project root directory."""
-    return Path(__file__).parent.parent.parent
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from common import PROJECT_ROOT
 
 
 def get_dataset_analysis_dir() -> Path:
     """Get dataset analysis output directory."""
-    return get_project_root() / "artifacts" / "dataset_analysis"
+    return PROJECT_ROOT / "artifacts" / "dataset_analysis"
 
 
 def get_next_serial(analysis_dir: Path) -> int:
@@ -330,8 +329,7 @@ def main():
     args = parser.parse_args()
     
     # 경로 설정
-    project_root = get_project_root()
-    input_file = project_root / args.input
+    input_file = PROJECT_ROOT / args.input
     
     if not input_file.exists():
         print(f"오류: 입력 파일을 찾을 수 없습니다: {input_file}")

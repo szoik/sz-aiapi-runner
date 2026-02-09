@@ -47,19 +47,17 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from common import PROJECT_ROOT
+
 
 # Temp directory for chunks
 TMP_BASE = Path(tempfile.gettempdir()) / "sz-parallel-jobs"
 
 
-def get_project_root() -> Path:
-    """Get project root directory."""
-    return Path(__file__).parent.parent.parent
-
-
 def get_runs_dir() -> Path:
     """Get runs directory."""
-    return get_project_root() / "artifacts" / "prompt_variations"
+    return PROJECT_ROOT / "artifacts" / "prompt_variations"
 
 
 def get_tmp_job_dir(job_id: str) -> Path:
