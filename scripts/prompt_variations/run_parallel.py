@@ -2,7 +2,7 @@
 """
 Run parallel estimation on chunked dataset.
 
-Executes weight_volume_newprompt.py on each chunk in parallel.
+Executes volume_weight_newprompt.py on each chunk in parallel.
 Tracks completion via .done marker files in each chunk directory.
 
 Usage:
@@ -154,7 +154,7 @@ def run_chunk(chunk_dir: Path, prompt_file: str) -> tuple[str, bool, str]:
     
     # Get project root for script path
     project_root = get_project_root()
-    script_path = project_root / "scripts" / "weight_volume_newprompt.py"
+    script_path = project_root / "scripts" / "volume_weight_newprompt.py"
     
     # Use project's venv python directly
     venv_dir = project_root / ".venv"
