@@ -2,21 +2,21 @@
 """
 Run parallel estimation on chunked dataset.
 
-Executes volume_weight_newprompt.py on each chunk in parallel.
+Executes weight_volume_newprompt.py on each chunk in parallel.
 Tracks completion via .done marker files in each chunk directory.
 
 Usage:
     # Run with default workers (5)
-    python scripts/prompt_variations/run_parallel.py 20260203-171500
+    python scripts/run_parallel.py 20260203-171500
 
     # Custom number of workers
-    python scripts/prompt_variations/run_parallel.py 20260203-171500 --workers 8
+    python scripts/run_parallel.py 20260203-171500 --workers 8
 
     # Dry run (show what would be executed)
-    python scripts/prompt_variations/run_parallel.py 20260203-171500 --dry-run
+    python scripts/run_parallel.py 20260203-171500 --dry-run
 
     # Merge results after completion
-    python scripts/prompt_variations/run_parallel.py 20260203-171500 --merge
+    python scripts/run_parallel.py 20260203-171500 --merge
 """
 
 from __future__ import annotations
@@ -35,9 +35,6 @@ from concurrent.futures import ProcessPoolExecutor, Future
 from pathlib import Path
 from typing import Optional
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from common import PROJECT_ROOT
-
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
@@ -50,11 +47,16 @@ from rich.text import Text
 TMP_BASE = Path(tempfile.gettempdir()) / "sz-parallel-jobs"
 
 
+def get_project_root() -> Path:
+    """Get project root directory."""
+    return Path(__file__).parent.parent.resolve()
+
+
 def get_jobs_dir() -> Path:
     """Get runs directory."""
     # Check new location first, fallback to legacy
-    new_dir = PROJECT_ROOT / "artifacts" / "prompt_variations"
-    legacy_dir = PROJECT_ROOT / ".local" / "parallel_jobs"
+    new_dir = get_project_root() / ".local" / "runs"
+    legacy_dir = get_project_root() / ".local" / "parallel_jobs"
     
     # Return new dir if it exists or legacy doesn't exist
     if new_dir.exists() or not legacy_dir.exists():
@@ -64,8 +66,8 @@ def get_jobs_dir() -> Path:
 
 def get_job_dir(job_id: str) -> Path:
     """Get job directory, checking both new and legacy locations."""
-    new_dir = PROJECT_ROOT / "artifacts" / "prompt_variations" / job_id
-    legacy_dir = PROJECT_ROOT / ".local" / "parallel_jobs" / job_id
+    new_dir = get_project_root() / ".local" / "runs" / job_id
+    legacy_dir = get_project_root() / ".local" / "parallel_jobs" / job_id
     
     # Return existing location, prefer new
     if new_dir.exists():
@@ -150,11 +152,12 @@ def run_chunk(chunk_dir: Path, prompt_file: str) -> tuple[str, bool, str]:
     if not input_file.exists():
         return (chunk_id, False, "input.tsv not found")
     
-    # Get script path
-    script_path = PROJECT_ROOT / "scripts" / "prompt_variations" / "volume_weight_newprompt.py"
+    # Get project root for script path
+    project_root = get_project_root()
+    script_path = project_root / "scripts" / "weight_volume_newprompt.py"
     
     # Use project's venv python directly
-    venv_dir = PROJECT_ROOT / ".venv"
+    venv_dir = project_root / ".venv"
     venv_python = venv_dir / "bin" / "python"
     
     # Set up environment to activate venv
@@ -180,7 +183,7 @@ def run_chunk(chunk_dir: Path, prompt_file: str) -> tuple[str, bool, str]:
                 stdout=log_f,
                 stderr=subprocess.STDOUT,
                 text=True,
-                cwd=str(PROJECT_ROOT),
+                cwd=str(project_root),
                 env=env,
             )
         
@@ -589,7 +592,7 @@ def run_parallel(
         console.print("[bold green]All chunks completed![/bold green]")
         console.print()
         console.print("To merge results:")
-        console.print(f"  python scripts/prompt_variations/run_parallel.py {job_id} --merge")
+        console.print(f"  python scripts/run_parallel.py {job_id} --merge")
     
     return success_count
 
@@ -655,7 +658,7 @@ def main():
             print()
             print("Next step:")
             comparison_path = job_dir / "comparison.tsv"
-            print(f"  uv run python scripts/prompt_variations/merge_results.py \\")
+            print(f"  uv run python scripts/merge_results.py \\")
             print(f"    -d {meta['input_file']} \\")
             print(f"    -r {output} \\")
             print(f"    -o {comparison_path}")

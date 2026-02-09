@@ -3,37 +3,29 @@
 Split dataset into chunks for parallel processing.
 
 Creates:
-- Job directory (artifacts/prompt_variations/{job_id}/):
+- Job directory (.local/parallel_jobs/{job_id}/):
   - meta.json: Job metadata (input file, prompt, chunk info)
 - Temp directory (/tmp/sz-parallel-jobs/{job_id}/):
   - chunks/NNNN/input.tsv: Chunked input files
   - .chunks_ready: Marker file
 
-Job ID format:
-    vw-{serial}-{prompt_version}-{dataset_name}
-    e.g., vw-001-v002-datasource_complete
-
-With --name option:
-    {name}-{serial}-{prompt_version}-{dataset_name}
-    e.g., baseline-001-v002-datasource_complete (replaces vw- prefix)
-
 Usage:
-    # Basic usage
-    python scripts/prompt_variations/split_dataset.py \
+    # Split with default chunk size (100 records per chunk)
+    python scripts/split_dataset.py \
         -i inputs/datasource_complete.tsv \
-        -p volume-weight.v002.system.txt
-
-    # With experiment name
-    python scripts/prompt_variations/split_dataset.py \
-        -i inputs/datasource_complete.tsv \
-        -p volume-weight.v002.system.txt \
-        -n baseline
+        -p weight-volume.v2.system.txt
 
     # Custom chunk size
-    python scripts/prompt_variations/split_dataset.py \
+    python scripts/split_dataset.py \
         -i inputs/datasource_complete.tsv \
-        -p volume-weight.v002.system.txt \
+        -p weight-volume.v2.system.txt \
         --chunk-size 200
+
+    # Custom output directory
+    python scripts/split_dataset.py \
+        -i inputs/datasource_complete.tsv \
+        -p weight-volume.v2.system.txt \
+        -o .local/my_job
 """
 
 from __future__ import annotations
@@ -41,90 +33,24 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import re
 import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from common import PROJECT_ROOT
 
 
 # Temp directory for chunks
 TMP_BASE = Path(tempfile.gettempdir()) / "sz-parallel-jobs"
 
 
-def get_runs_dir() -> Path:
-    """Get runs directory."""
-    return PROJECT_ROOT / "artifacts" / "prompt_variations"
+def get_project_root() -> Path:
+    """Get project root directory."""
+    return Path(__file__).parent.parent
 
 
 def get_tmp_job_dir(job_id: str) -> Path:
     """Get temp directory for job chunks."""
     return TMP_BASE / job_id
-
-
-def get_next_serial(runs_dir: Path) -> int:
-    """Get next serial number by scanning existing job directories."""
-    if not runs_dir.exists():
-        return 1
-    
-    max_serial = 0
-    # Pattern: optional name prefix (vw- or custom), then 3-digit serial
-    # e.g., "vw-001-v002-dataset" or "baseline-001-v002-dataset"
-    pattern = re.compile(r"(?:[\w]+-)?(\d{3})-v\d{3}-")
-    
-    for item in runs_dir.iterdir():
-        if item.is_dir():
-            match = pattern.match(item.name)
-            if match:
-                serial = int(match.group(1))
-                max_serial = max(max_serial, serial)
-    
-    return max_serial + 1
-
-
-def extract_prompt_version(prompt_file: str) -> str:
-    """Extract version from prompt filename.
-    
-    e.g., "volume-weight.v002.system.txt" -> "v002"
-    """
-    match = re.search(r"\.(v\d{3})\.", prompt_file)
-    if match:
-        return match.group(1)
-    
-    # Fallback for old format (v2, v3, etc.)
-    match = re.search(r"\.v(\d+)\.", prompt_file)
-    if match:
-        return f"v{int(match.group(1)):03d}"
-    
-    return "v000"
-
-
-def extract_dataset_name(input_file: Path) -> str:
-    """Extract dataset name from input file path.
-    
-    e.g., "inputs/datasource_complete.tsv" -> "datasource_complete"
-    """
-    return input_file.stem
-
-
-def generate_job_id(
-    runs_dir: Path,
-    prompt_file: str,
-    input_file: Path,
-    name: str | None = None,
-) -> str:
-    """Generate job ID based on naming convention."""
-    serial = get_next_serial(runs_dir)
-    version = extract_prompt_version(prompt_file)
-    dataset = extract_dataset_name(input_file)
-    
-    if name:
-        return f"{name}-{serial:03d}-{version}-{dataset}"
-    else:
-        return f"vw-{serial:03d}-{version}-{dataset}"
 
 
 def count_records(input_file: Path) -> int:
@@ -138,7 +64,6 @@ def split_dataset(
     output_dir: Path,
     prompt_file: str,
     chunk_size: int = 100,
-    name: str | None = None,
 ) -> dict:
     """
     Split TSV into chunks and create job metadata.
@@ -156,8 +81,8 @@ def split_dataset(
     print(f"Chunks to create: {chunk_count}")
     print("-" * 60)
     
-    # Generate job ID
-    job_id = generate_job_id(output_dir, prompt_file, input_file, name)
+    # Create job directory (for metadata and final results)
+    job_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     job_dir = output_dir / job_id
     job_dir.mkdir(parents=True, exist_ok=True)
     
@@ -220,9 +145,6 @@ def split_dataset(
         "tmp_dir": str(tmp_job_dir),
     }
     
-    if name:
-        meta["name"] = name
-    
     meta_file = job_dir / "meta.json"
     with open(meta_file, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
@@ -250,11 +172,7 @@ def main():
     )
     parser.add_argument(
         "-p", "--prompt", required=True,
-        help="Prompt template filename (e.g., volume-weight.v002.system.txt)"
-    )
-    parser.add_argument(
-        "-n", "--name",
-        help="Experiment name prefix (e.g., baseline, tuning)"
+        help="Prompt template filename (stored in metadata)"
     )
     parser.add_argument(
         "--chunk-size", type=int, default=100,
@@ -262,7 +180,7 @@ def main():
     )
     parser.add_argument(
         "-o", "--output",
-        help="Output directory (default: artifacts/prompt_variations)"
+        help="Output directory (default: .local/parallel_jobs)"
     )
     
     args = parser.parse_args()
@@ -275,19 +193,18 @@ def main():
     if args.output:
         output_dir = Path(args.output)
     else:
-        output_dir = get_runs_dir()
+        output_dir = get_project_root() / ".local" / "runs"
     
     meta = split_dataset(
         input_file=input_file,
         output_dir=output_dir,
         prompt_file=args.prompt,
         chunk_size=args.chunk_size,
-        name=args.name,
     )
     
     print()
     print("Next step:")
-    print(f"  uv run python scripts/prompt_variations/run_parallel.py {meta['job_id']}")
+    print(f"  python scripts/run_parallel.py {meta['job_id']}")
 
 
 if __name__ == "__main__":
