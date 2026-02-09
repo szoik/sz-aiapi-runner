@@ -1,0 +1,23 @@
+# 오차 TOP 5 항목
+입력 파일: inputs/categories/u03_스킨토너_err50.tsv
+총 데이터: 25건
+
+과대추정 TOP 5 (u03_스킨토너_err50)
+================================================================================
+#    오차율          AI         실측         URL
+--------------------------------------------------------------------------------
+1    -23.1%       250g       325g       https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/27a21d39-c666-46f4-9960-7e5846470b55.jpg
+2    -25.9%       500g       675g       https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/08153872-4dd3-47f2-a052-5518b40205d2.jpg
+3    -30.2%       300g       430g       https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/5f3104dd-3875-4a6a-8be8-9cf77760ca21.jpg
+4    -30.6%       500g       720g       https://shop-phinf.pstatic.net/20240509_281/1715239421424M4EOj_JPEG/116375317161987515_573374330.jpg?type=m510
+5    -40.5%       250g       420g       https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/1e6aa23f-9a41-409e-8224-b5580760a5a9.jpg
+
+과소추정 TOP 5 (u03_스킨토너_err50)
+================================================================================
+#    오차율          AI         실측         URL
+--------------------------------------------------------------------------------
+1    -93.8%       500g       8.1kg      https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/cad917b2-9d6a-4da3-9931-b3876faaeea5.jpg
+2    -93.5%       500g       7.8kg      https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/0508318f-9372-4524-9b29-122352143293.jpg
+3    -93.3%       500g       7.5kg      https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/c70af82c-c210-4235-ba59-dbdeb0b34c42.png
+4    -93.3%       500g       7.5kg      https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/62f490e7-7784-4c26-8bd9-3ed6b08449a5.jpg
+5    -93.2%       500g       7.4kg      https://sazo-qa-ai-resources.s3.ap-northeast-2.amazonaws.com/img/306f4dca-dd06-4fee-8f39-4b056a87306e.jpg
