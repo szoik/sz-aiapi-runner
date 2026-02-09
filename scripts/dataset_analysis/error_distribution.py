@@ -6,17 +6,17 @@ AI 추정값과 실측값 간의 오차를 구간별로 분석하고 시각화�
 분석 대상: Max Dim, Mid Dim, Min Dim, Volume, Weight
 
 사용법:
-    python scripts/dataset_analysis/error_distribution.py [--input INPUT_FILE] [--name NAME]
+    python scripts/error_distribution.py [--input INPUT_FILE] [--name NAME]
 
 예시:
     # 기본 실행 (datasource_complete.tsv)
-    python scripts/dataset_analysis/error_distribution.py
+    python scripts/error_distribution.py
     
     # 특정 카테고리 분석
-    python scripts/dataset_analysis/error_distribution.py -i inputs/categories/o01_보이그룹_인형피규어_err50.tsv
+    python scripts/error_distribution.py -i inputs/categories/o01_보이그룹_인형피규어_err50.tsv
     
     # 커스텀 이름 지정
-    python scripts/dataset_analysis/error_distribution.py -i inputs/datasource_complete.tsv --name baseline
+    python scripts/error_distribution.py -i inputs/datasource_complete.tsv --name baseline
 
 출력 경로: artifacts/dataset_analysis/vw-{serial}-{dataset명}/
     - error_distribution.png: 오차 분포 시각화
@@ -28,7 +28,6 @@ AI 추정값과 실측값 간의 오차를 구간별로 분석하고 시각화�
 import argparse
 import json
 import re
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -36,13 +35,15 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from common import PROJECT_ROOT
+
+def get_project_root() -> Path:
+    """Get project root directory."""
+    return Path(__file__).parent.parent
 
 
 def get_dataset_analysis_dir() -> Path:
     """Get dataset analysis output directory."""
-    return PROJECT_ROOT / "artifacts" / "dataset_analysis"
+    return get_project_root() / "artifacts" / "dataset_analysis"
 
 
 def get_next_serial(analysis_dir: Path) -> int:
@@ -329,7 +330,8 @@ def main():
     args = parser.parse_args()
     
     # 경로 설정
-    input_file = PROJECT_ROOT / args.input
+    project_root = get_project_root()
+    input_file = project_root / args.input
     
     if not input_file.exists():
         print(f"오류: 입력 파일을 찾을 수 없습니다: {input_file}")

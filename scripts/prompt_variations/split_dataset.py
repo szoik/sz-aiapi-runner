@@ -3,7 +3,7 @@
 Split dataset into chunks for parallel processing.
 
 Creates:
-- Job directory (artifacts/runs/{job_id}/):
+- Job directory (artifacts/prompt_variations/{job_id}/):
   - meta.json: Job metadata (input file, prompt, chunk info)
 - Temp directory (/tmp/sz-parallel-jobs/{job_id}/):
   - chunks/NNNN/input.tsv: Chunked input files
@@ -59,7 +59,7 @@ def get_project_root() -> Path:
 
 def get_runs_dir() -> Path:
     """Get runs directory."""
-    return get_project_root() / "artifacts" / "runs"
+    return get_project_root() / "artifacts" / "prompt_variations"
 
 
 def get_tmp_job_dir(job_id: str) -> Path:
@@ -264,7 +264,7 @@ def main():
     )
     parser.add_argument(
         "-o", "--output",
-        help="Output directory (default: artifacts/runs)"
+        help="Output directory (default: artifacts/prompt_variations)"
     )
     
     args = parser.parse_args()
