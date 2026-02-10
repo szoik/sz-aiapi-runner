@@ -29,6 +29,21 @@ from pathlib import Path
 
 from PIL import Image
 
+DEFAULT_INPUT_BASE = ".local/prompt_results/weight-volume.v2.system"
+DEFAULT_OUTPUT_DIR = ".local/prompt_results/weight-volume.v2.system/summary"
+DEFAULT_CATEGORIES = [
+    "o01_보이그룹_인형피규어",
+    "o02_방송예능_인형피규어",
+    "o03_바인더",
+    "o04_키덜트_피규어인형",
+    "o05_토트백",
+    "u01_이어폰팁",
+    "u02_볼링가방",
+    "u03_스킨토너",
+    "u04_에센스",
+    "u05_시리얼",
+]
+
 
 def combine_charts(
     input_dir: str,
@@ -123,27 +138,19 @@ def main():
         description="Combine chart images into summary"
     )
     parser.add_argument("-i", "--input-base",
-                        default=".local/prompt_results/weight-volume.v2.system",
+                        default=DEFAULT_INPUT_BASE,
                         help="Base directory containing category folders")
     parser.add_argument("-o", "--output-dir",
-                        default=".local/prompt_results/weight-volume.v2.system/summary",
+                        default=DEFAULT_OUTPUT_DIR,
                         help="Output directory for combined images")
+    parser.add_argument("-c", "--categories", nargs="*",
+                        default=None,
+                        help="Categories to process (default: built-in list)")
     
     args = parser.parse_args()
     
     # Categories to process
-    categories = [
-        "o01_보이그룹_인형피규어",
-        "o02_방송예능_인형피규어",
-        "o03_바인더",
-        "o04_키덜트_피규어인형",
-        "o05_토트백",
-        "u01_이어폰팁",
-        "u02_볼링가방",
-        "u03_스킨토너",
-        "u04_에센스",
-        "u05_시리얼",
-    ]
+    categories = args.categories if args.categories else DEFAULT_CATEGORIES
     
     success = 0
     for cat in categories:

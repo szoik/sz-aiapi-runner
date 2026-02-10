@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
-"""Visualize weight and volume error distribution."""
+"""
+Visualize weight and volume error distribution.
 
+Usage:
+    python scripts/attic/visualize_errors.py \\
+        -i colab/20260128_experiment_datasource.tsv \\
+        -o .local/tmp/error_distribution.png
+"""
+
+import argparse
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
+
 
 def load_data(filepath):
     data = []
@@ -20,7 +29,15 @@ def parse_float(val):
         return None
 
 def main():
-    data = load_data('colab/20260128_experiment_datasource.tsv')
+    parser = argparse.ArgumentParser(
+        description="Visualize weight and volume error distribution",
+        epilog="예시: python scripts/attic/visualize_errors.py -i colab/20260128_experiment_datasource.tsv -o .local/tmp/error_distribution.png"
+    )
+    parser.add_argument("-i", "--input", required=True, help="입력 TSV 파일 (weight_error, volume_error 컬럼 필요)")
+    parser.add_argument("-o", "--output", required=True, help="출력 이미지 파일")
+    args = parser.parse_args()
+
+    data = load_data(args.input)
     
     weight_errors = [parse_float(r['weight_error']) for r in data]
     volume_errors = [parse_float(r['volume_error']) for r in data]
@@ -80,9 +97,8 @@ def main():
     
     plt.tight_layout()
     
-    output_path = '.local/tmp/error_distribution.png'
-    plt.savefig(output_path, dpi=150)
-    print(f"\nSaved to: {output_path}")
+    plt.savefig(args.output, dpi=150)
+    print(f"\nSaved to: {args.output}")
     
     # Show if possible
     plt.show()

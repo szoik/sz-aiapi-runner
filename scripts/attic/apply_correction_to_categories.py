@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
 """
 11개 카테고리에 보정 계수 적용하여 효과 검증
+
+Usage:
+    python scripts/attic/apply_correction_to_categories.py \\
+        -c .local/weight_correction_config.json \\
+        -i .local/parallel_jobs/20260204-221954/comparison_no_outlier.tsv \\
+        --v5-base .local/prompt_results/weight-volume.v5.system
 """
 
+import argparse
 import pandas as pd
 import numpy as np
 from pathlib import Path
 import json
 
-def load_correction_config():
+
+def load_correction_config(config_path: str):
     """보정 계수 설정 로드"""
-    with open(".local/weight_correction_config.json") as f:
+    with open(config_path) as f:
         return json.load(f)
 
 def get_correction_factor(ai_weight: float, config: list) -> float:
@@ -23,7 +31,16 @@ def get_correction_factor(ai_weight: float, config: list) -> float:
     return 1.0  # 기본값
 
 def main():
-    config = load_correction_config()
+    parser = argparse.ArgumentParser(
+        description="카테고리별 보정 효과 검증",
+        epilog="예시: python scripts/attic/apply_correction_to_categories.py -c .local/weight_correction_config.json -i .local/parallel_jobs/20260204-221954/comparison_no_outlier.tsv"
+    )
+    parser.add_argument("-c", "--config", required=True, help="보정 설정 JSON 파일")
+    parser.add_argument("-i", "--input", required=True, help="비교 TSV 파일")
+    parser.add_argument("--v5-base", required=True, help="v5 결과 폴더")
+    args = parser.parse_args()
+
+    config = load_correction_config(args.config)
     
     # 카테고리 파일들
     categories = {
@@ -41,10 +58,10 @@ def main():
     }
     
     # v5 결과 폴더
-    v5_base = Path(".local/prompt_results/weight-volume.v5.system")
+    v5_base = Path(args.v5_base)
     
     # 전체 비교 데이터 (v0 vs new 비교 파일 - v0 정보 포함)
-    comparison_file = Path(".local/parallel_jobs/20260204-221954/comparison_no_outlier.tsv")
+    comparison_file = Path(args.input)
     full_df = pd.read_csv(comparison_file, sep="\t")
     
     print("=" * 110)

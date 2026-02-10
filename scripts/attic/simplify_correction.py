@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 """
 보정 계수를 더 단순한 구간으로 최적화
+
+Usage:
+    python scripts/attic/simplify_correction.py \\
+        -i .local/parallel_jobs/20260204-221954/comparison_no_outlier.tsv \\
+        -o .local/weight_correction_simple.json
 """
 
+import argparse
 import pandas as pd
 import numpy as np
 from pathlib import Path
 import json
+
 
 def find_optimal_factor(weights_ai, weights_actual, search_range=(0.5, 5.0), step=0.01):
     """MAE를 최소화하는 보정 계수 찾기"""
@@ -27,8 +34,16 @@ def find_optimal_factor(weights_ai, weights_actual, search_range=(0.5, 5.0), ste
     return best_factor, best_mae
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="보정 계수를 더 단순한 구간으로 최적화",
+        epilog="예시: python scripts/attic/simplify_correction.py -i .local/parallel_jobs/.../comparison.tsv -o .local/weight_correction_simple.json"
+    )
+    parser.add_argument("-i", "--input", required=True, help="입력 TSV 파일 (비교 결과)")
+    parser.add_argument("-o", "--output", required=True, help="보정 계수 설정 JSON 출력 파일")
+    args = parser.parse_args()
+
     # 데이터 로드
-    comparison_file = Path(".local/parallel_jobs/20260204-221954/comparison_no_outlier.tsv")
+    comparison_file = Path(args.input)
     df = pd.read_csv(comparison_file, sep="\t")
     
     df['ai_weight'] = df['old_weight_kg']
@@ -114,7 +129,7 @@ def main():
         print(f"  {c['min']}kg ~ {max_str}kg: × {c['factor']}")
     
     # 저장
-    config_path = Path(".local/weight_correction_simple.json")
+    config_path = Path(args.output)
     with open(config_path, 'w') as f:
         json.dump(best_config, f, indent=2)
     print(f"\n저장: {config_path}")

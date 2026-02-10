@@ -1,17 +1,29 @@
 #!/usr/bin/env python3
 """
 v5 reasoning과 추정 오차의 상관관계 분석
+
+Usage:
+    python scripts/attic/analyze_reasoning.py -i .local/parallel_jobs/20260204-221954/comparison_no_outlier.tsv
 """
 
+import argparse
 import pandas as pd
 import numpy as np
 from pathlib import Path
 import re
 from collections import Counter
 
+
 def main():
+    parser = argparse.ArgumentParser(
+        description="reasoning과 추정 오차 상관관계 분석",
+        epilog="예시: python scripts/attic/analyze_reasoning.py -i .local/parallel_jobs/20260204-221954/comparison_no_outlier.tsv"
+    )
+    parser.add_argument("-i", "--input", required=True, help="입력 TSV 파일 (비교 결과)")
+    args = parser.parse_args()
+
     # 데이터 로드
-    df = pd.read_csv(".local/parallel_jobs/20260204-221954/comparison_no_outlier.tsv", sep="\t")
+    df = pd.read_csv(args.input, sep="\t")
     
     # 에러 계산 (v5 기준)
     df['v5_error'] = (df['new_weight_kg'] - df['actual_weight']) / df['actual_weight'] * 100

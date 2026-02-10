@@ -2,8 +2,14 @@
 """
 동일 데이터셋에 대한 반복 추정 일관성 비교 그래프
 4개 날짜의 결과를 품목별로 비교하여 추정 편차를 시각화
+
+Usage:
+    python scripts/attic/compare_estimation_consistency.py \\
+        --base-dir .local \\
+        --folders 20260125-170122-50,20260126-115845-50,20260128-135432-50,20260129-113201-50
 """
 
+import argparse
 import json
 import matplotlib.pyplot as plt
 import matplotlib
@@ -43,18 +49,23 @@ def load_results(filepath):
     return results
 
 def main():
-    dates = [
-        ('20260125-170122-50', '01/25'),
-        ('20260126-115845-50', '01/26'),
-        ('20260128-135432-50', '01/28'),
-        ('20260129-113201-50', '01/29'),
-    ]
-    colors = ['red', 'green', 'blue', '#DAA520']  # yellow → goldenrod for visibility
+    parser = argparse.ArgumentParser(
+        description="반복 추정 일관성 비교",
+        epilog="예시: python scripts/attic/compare_estimation_consistency.py --base-dir .local --folders 20260125-170122-50,20260126-115845-50"
+    )
+    parser.add_argument("--base-dir", required=True, help="결과 폴더 기본 경로")
+    parser.add_argument("--folders", required=True, help="비교할 폴더들 (쉼표 구분)")
+    parser.add_argument("-o", "--output", default=None, help="출력 파일 경로")
+    args = parser.parse_args()
+
+    folder_list = args.folders.split(",")
+    dates = [(f, f.split("-")[0][4:6] + "/" + f.split("-")[0][6:8]) for f in folder_list]
+    colors = ['red', 'green', 'blue', '#DAA520', 'purple', 'orange'][:len(dates)]
 
     # 데이터 로드
     all_data = {}
     for folder, label in dates:
-        filepath = Path(f".local/{folder}/result.jsonl")
+        filepath = Path(args.base_dir) / folder / "result.jsonl"
         all_data[label] = load_results(filepath)
 
     # 공통 품목 ID 추출 (id 기준 정렬)
@@ -94,7 +105,7 @@ def main():
 
     plt.tight_layout(rect=[0, 0, 1, 0.97])
 
-    output_path = Path(".local/estimation_consistency_comparison.png")
+    output_path = Path(args.output) if args.output else Path(args.base_dir) / "estimation_consistency_comparison.png"
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     plt.close()
     print(f"그래프 저장: {output_path}")

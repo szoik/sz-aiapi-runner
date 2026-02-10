@@ -2,15 +2,27 @@
 """
 AI 추정값 vs 실제 무게의 관계 분석
 비선형 보정 함수를 찾기 위한 분석
+
+Usage:
+    python scripts/attic/analyze_ai_vs_actual.py -i .local/parallel_jobs/20260204-221954/comparison_no_outlier.tsv
 """
 
+import argparse
 import pandas as pd
 import numpy as np
 from pathlib import Path
 
+
 def main():
+    parser = argparse.ArgumentParser(
+        description="AI 추정값 vs 실제 무게 관계 분석",
+        epilog="예시: python scripts/attic/analyze_ai_vs_actual.py -i .local/parallel_jobs/20260204-221954/comparison_no_outlier.tsv"
+    )
+    parser.add_argument("-i", "--input", required=True, help="입력 TSV 파일 (비교 결과)")
+    args = parser.parse_args()
+
     # 데이터 로드
-    comparison_file = Path(".local/parallel_jobs/20260204-221954/comparison_no_outlier.tsv")
+    comparison_file = Path(args.input)
     df = pd.read_csv(comparison_file, sep="\t")
     
     # 컬럼명 정규화 (old = v0 기준)

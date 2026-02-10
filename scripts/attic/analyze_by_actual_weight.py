@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
-"""Analyze errors by actual weight range."""
+"""
+Analyze errors by actual weight range.
 
+Usage:
+    python scripts/attic/analyze_by_actual_weight.py -i inputs/datasource_complete.tsv
+"""
+
+import argparse
 import csv
 from collections import defaultdict
 
+DEFAULT_INPUT = "inputs/datasource_complete.tsv"
+
 
 def main():
+    parser = argparse.ArgumentParser(description="실제 무게 구간별 오류 분석")
+    parser.add_argument("-i", "--input", default=DEFAULT_INPUT, help="입력 TSV 파일")
+    args = parser.parse_args()
+
     weight_ranges = [
         (0, 0.1),
         (0.1, 0.3),
@@ -18,7 +30,7 @@ def main():
     
     range_data = defaultdict(list)
     
-    with open("inputs/datasource_complete.tsv", "r", encoding="utf-8") as f:
+    with open(args.input, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f, delimiter="\t")
         
         for row in reader:
