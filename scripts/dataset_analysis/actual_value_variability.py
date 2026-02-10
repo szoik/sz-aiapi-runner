@@ -6,7 +6,7 @@
 AI 추정치는 동일한데 실측치는 다른 경우를 시각화합니다.
 
 사용법:
-    python scripts/duplicate_variability.py [--input INPUT_FILE] [--output OUTPUT_DIR] [--title TITLE]
+    python scripts/dataset_analysis/actual_value_variability.py [--input INPUT_FILE] [--output OUTPUT_DIR] [--title TITLE]
 
 출력:
     - 상품별 실측치 분포 boxplot (actual_variability.png)
