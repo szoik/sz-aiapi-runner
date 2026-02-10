@@ -180,7 +180,7 @@ def run_chunk(chunk_dir: Path, prompt_file: str) -> tuple[str, bool, str]:
                 stdout=log_f,
                 stderr=subprocess.STDOUT,
                 text=True,
-                cwd=str(project_root),
+                cwd=str(PROJECT_ROOT),
                 env=env,
             )
         
