@@ -3,15 +3,17 @@
 Convert JSONL file to clean TSV file for datasource.
 
 Usage:
-    python scripts/jsonl_to_tsv.py
+    python scripts/etl/jsonl_to_tsv.py
 """
 
 import json
 import csv
 import shutil
+import sys
 from pathlib import Path
 from datetime import datetime
 
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from common import PROJECT_ROOT
 
 
