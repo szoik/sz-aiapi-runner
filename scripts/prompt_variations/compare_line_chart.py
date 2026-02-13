@@ -66,6 +66,66 @@ def load_comparison_data(file_path: str) -> list[dict]:
     return data
 
 
+def sort_dimensions(d1: float, d2: float, d3: float) -> tuple[float, float, float]:
+    """Sort dimensions into (max, mid, min)."""
+    dims = sorted([d1, d2, d3], reverse=True)
+    return dims[0], dims[1], dims[2]
+
+
+def calculate_dimension_errors(data: list[dict]) -> dict:
+    """Calculate dimension errors (max, mid, min) for old and new prompts."""
+    results = {
+        "old_max": [], "old_mid": [], "old_min": [],
+        "new_max": [], "new_mid": [], "new_min": [],
+    }
+    
+    for d in data:
+        # Actual dimensions
+        actual_d1 = safe_float(d.get("actual_d1", 0))
+        actual_d2 = safe_float(d.get("actual_d2", 0))
+        actual_d3 = safe_float(d.get("actual_d3", 0))
+        
+        if actual_d1 <= 0 or actual_d2 <= 0 or actual_d3 <= 0:
+            # Append 0 to keep alignment
+            for key in results:
+                results[key].append(0)
+            continue
+        
+        actual_max, actual_mid, actual_min = sort_dimensions(actual_d1, actual_d2, actual_d3)
+        
+        # Old prompt dimensions
+        old_w = safe_float(d.get("old_width_cm", 0))
+        old_d = safe_float(d.get("old_depth_cm", 0))
+        old_h = safe_float(d.get("old_height_cm", 0))
+        
+        if old_w > 0 and old_d > 0 and old_h > 0:
+            old_max, old_mid, old_min = sort_dimensions(old_w, old_d, old_h)
+            results["old_max"].append((old_max - actual_max) / actual_max)
+            results["old_mid"].append((old_mid - actual_mid) / actual_mid)
+            results["old_min"].append((old_min - actual_min) / actual_min)
+        else:
+            results["old_max"].append(0)
+            results["old_mid"].append(0)
+            results["old_min"].append(0)
+        
+        # New prompt dimensions
+        new_w = safe_float(d.get("new_width_cm", 0))
+        new_d = safe_float(d.get("new_depth_cm", 0))
+        new_h = safe_float(d.get("new_height_cm", 0))
+        
+        if new_w > 0 and new_d > 0 and new_h > 0:
+            new_max, new_mid, new_min = sort_dimensions(new_w, new_d, new_h)
+            results["new_max"].append((new_max - actual_max) / actual_max)
+            results["new_mid"].append((new_mid - actual_mid) / actual_mid)
+            results["new_min"].append((new_min - actual_min) / actual_min)
+        else:
+            results["new_max"].append(0)
+            results["new_mid"].append(0)
+            results["new_min"].append(0)
+    
+    return results
+
+
 def plot_line_chart(
     old_errors: list[float],
     new_errors: list[float],
@@ -118,7 +178,7 @@ def run_comparison(
     output_dir: str,
     title: str = "",
 ):
-    """Run line chart comparison."""
+    """Run line chart comparison for all 5 metrics."""
     
     print(f"Input: {input_file}")
     print("-" * 80)
@@ -131,43 +191,55 @@ def run_comparison(
         print("No data!")
         return 0
     
-    # Extract error rates
-    old_errors = [safe_float(d["old_weight_error"]) for d in data]
-    new_errors = [safe_float(d["new_weight_error"]) for d in data]
+    # Calculate dimension errors
+    dim_errors = calculate_dimension_errors(data)
+    
+    # Define all metrics: (old_errors, new_errors, metric_name, filename_prefix)
+    metrics = [
+        ([safe_float(d["old_weight_error"]) for d in data],
+         [safe_float(d["new_weight_error"]) for d in data],
+         "무게", "weight"),
+        ([safe_float(d["old_volume_error"]) for d in data],
+         [safe_float(d["new_volume_error"]) for d in data],
+         "부피", "volume"),
+        (dim_errors["old_max"], dim_errors["new_max"], "Max 치수", "dim_max"),
+        (dim_errors["old_mid"], dim_errors["new_mid"], "Mid 치수", "dim_mid"),
+        (dim_errors["old_min"], dim_errors["new_min"], "Min 치수", "dim_min"),
+    ]
     
     # Ensure output directory exists
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     
-    # 1. Original order
-    plot_line_chart(
-        old_errors,
-        new_errors,
-        f"{output_dir}/line_chart_original.png",
-        title=title,
-        subtitle="원본 순서",
-    )
-    
-    # 2. Sorted by old error (descending: + → 0 → -)
-    sorted_indices = sorted(range(len(old_errors)), key=lambda i: old_errors[i], reverse=True)
-    old_errors_sorted = [old_errors[i] for i in sorted_indices]
-    new_errors_sorted = [new_errors[i] for i in sorted_indices]
-    
-    plot_line_chart(
-        old_errors_sorted,
-        new_errors_sorted,
-        f"{output_dir}/line_chart_sorted.png",
-        title=title,
-        subtitle="기존 오차 큰 순",
-    )
-    
-    # Print summary
-    old_mae = np.mean([abs(e) for e in old_errors])
-    new_mae = np.mean([abs(e) for e in new_errors])
-    improved = sum(1 for o, n in zip(old_errors, new_errors) if abs(n) < abs(o))
-    
-    print(f"\n=== Summary ===")
-    print(f"MAE: {old_mae*100:.1f}% → {new_mae*100:.1f}%")
-    print(f"Improved: {improved}/{len(data)} ({improved/len(data)*100:.1f}%)")
+    for old_errors, new_errors, metric_name, file_prefix in metrics:
+        metric_title = f"{title} - {metric_name}" if title else metric_name
+        
+        # 1. Original order
+        plot_line_chart(
+            old_errors,
+            new_errors,
+            f"{output_dir}/line_chart_{file_prefix}_original.png",
+            title=metric_title,
+            subtitle="원본 순서",
+        )
+        
+        # 2. Sorted by old error (descending: + → 0 → -)
+        sorted_indices = sorted(range(len(old_errors)), key=lambda i: old_errors[i], reverse=True)
+        old_errors_sorted = [old_errors[i] for i in sorted_indices]
+        new_errors_sorted = [new_errors[i] for i in sorted_indices]
+        
+        plot_line_chart(
+            old_errors_sorted,
+            new_errors_sorted,
+            f"{output_dir}/line_chart_{file_prefix}_sorted.png",
+            title=metric_title,
+            subtitle="기존 오차 큰 순",
+        )
+        
+        # Print summary for this metric
+        old_mae = np.mean([abs(e) for e in old_errors])
+        new_mae = np.mean([abs(e) for e in new_errors])
+        improved = sum(1 for o, n in zip(old_errors, new_errors) if abs(n) < abs(o))
+        print(f"{metric_name}: MAE {old_mae*100:.1f}% → {new_mae*100:.1f}%, Improved {improved}/{len(data)}")
     
     return len(data)
 
