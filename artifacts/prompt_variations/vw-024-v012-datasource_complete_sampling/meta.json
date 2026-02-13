@@ -1,0 +1,11 @@
+{
+  "job_id": "vw-024-v012-datasource_complete_sampling",
+  "created_at": "2026-02-10T19:44:53.939603",
+  "input_file": "/Users/great/github.com/sazo-korea-shop/sz-aiapi-runner/inputs/datasource_complete_sampling.tsv",
+  "prompt_file": "volume-weight.v012.system.txt",
+  "total_records": 972,
+  "chunk_size": 25,
+  "chunk_count": 39,
+  "status": "ready",
+  "tmp_dir": "/var/folders/yp/75tksprn167bwh1nyyc9fm640000gn/T/sz-parallel-jobs/vw-024-v012-datasource_complete_sampling"
+}
