@@ -75,3 +75,20 @@
   - "format examples only, not constraints"
   - 구체적 제품명 없이 포맷만 제시
 - 단위 변환 오류 방지 강화: "NOT 7.44kg", "NOT 240" 명시
+
+## v014
+**착안점**: v013 + v010 통합, 과소추정 방지
+- v010의 균형 잡힌 구조 기반
+- v013의 개선점 통합:
+  - Liquid density rule (1mL ≈ 1g)
+  - Unit conversion 강조 (÷1000 명시)
+- Priority Order 3단계로 정리:
+  1. Explicit values (weight, volume, quantity)
+  2. Image analysis (count, context)
+  3. Category-based reasoning
+- Weight Reference Ranges를 "sanity check"로 재정의
+  - 제약이 아닌 검증용 참고값
+  - "follow the evidence" 명시
+- packed_volume = shipping box size 명시 (product와 구분)
+- Common calculation mistakes 섹션 추가
+- 예시 6개로 다양화 (bulk, liquid, single, figure 등)
